@@ -114,7 +114,7 @@ footer{text-align:center;color:#71899a;font-size:11px;margin:14px}
 </style></head>
 <body><main>
 <header><div><h1>⚔️ 文明戰線 <span style='color:#f3c66b'>/ FRONTLINE V16</span></h1><div class="muted">REAL-TIME STRATEGY　/　DEPLOY · RESEARCH · CONQUER</div></div>
-<div class="stats"><div class="pill"><span class="coin-icon" aria-label="金幣"></span> <span id="gold">180</span> 金幣</div><button id="infiniteGoldBtn" class="pill" onclick="toggleInfiniteGold()" style="cursor:pointer;border:1px solid #d6ad5a;background:#493b20;color:#ffe0a0">∞ 無限金幣：關</button><div class="pill">⚡ <span id="energy">0</span></div><div class="pill">🏛️ <span id="era">石器時代</span></div><div class="pill">⏱️ <span id="time">0:00</span></div></div></header>
+<div class="stats"><div class="pill"><span class="coin-icon" aria-label="金幣"></span> <span id="gold">180</span> 金幣</div><div class="pill">⚡ <span id="energy">0</span>/100</div><div class="pill">🏛️ <span id="era">石器時代</span></div><div class="pill">⏱️ <span id="time">0:00</span></div></div></header>
 <section id="arena"><canvas id="game" width="1000" height="400"></canvas><div id="banner">石器時代｜第 1 波敵軍準備中</div>
 <div id="skillDock" aria-label="戰場技能">
 <button class="skillIcon bombard" onclick="skill('bombard')" title="火砲轟炸：消耗 45 能量，敵軍全體受到傷害">
@@ -163,7 +163,7 @@ footer{text-align:center;color:#71899a;font-size:11px;margin:14px}
 </section>
 <div class="bottom"><button class="evolve" id="evolve" onclick="evolve()">⬆️ 進化下一時代</button><button id="sound" onclick="toggleSound()">🔇 音效：關</button><button onclick="toggleSpeed()">⏩ 速度：<span id="speed">1</span> 倍</button><button onclick="togglePause()">⏸️ <span id="pause">暫停</span></button><button onclick="saveGame()">💾 儲存進度</button><button onclick="loadGame()">📂 載入進度</button><button onclick="newGame()">🔄 重開本章</button><button onclick="resetCampaign()">🧹 重置章節</button></div>
 <div id="message">先部署部隊！累積資源並研究科技，找到克制敵軍的組合。</div>
-<footer>V42 戰場視覺整理・無限金幣測試模式・純 RTS 戰略｜進度可儲存在本機瀏覽器</footer>
+<footer>V42 戰場視覺整理・純 RTS 戰略｜進度可儲存在本機瀏覽器</footer>
 </main>
 <script>
 
@@ -246,27 +246,56 @@ function sfx(type,force=false){
   o.connect(gain);gain.connect(audioCtx.destination);o.start(now);o.stop(now+dur);
  }catch(e){}
 }
-function fresh(){return {gold:180,infiniteGold:false,energy:0,era:0,miners:[],php:1500,pBaseMax:1500,pBaseUpgrade:0,ehp:1500,eBaseMax:1500,units:[],shots:[],time:0,paused:false,over:false,speed:1,tech:{power:0,armor:0,economy:0,training:0,mineSpeed:0,mineYield:0},enemyTech:{power:0,armor:0,training:0},enemyResearchCd:24,aiReason:'正在觀察我方軍隊',defenses:{p:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0},e:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0}},enemyBuildCd:38,rage:0,enemyTimer:5,wave:1,aiEra:0,aiStyle:'balanced',spawnCount:0,baseCd:0,particles:[],bossWave:0,bossesDefeated:0,eventTimer:42,map:'plain',chapter:1,enemyScale:1,command:'advance'}}
-function say(t){$('message').textContent=t}
-function toggleInfiniteGold(){S.infiniteGold=!S.infiniteGold;ui();say(S.infiniteGold?'測試模式已開啟：無限金幣，所有我方花費不扣款。':'無限金幣已關閉：恢復正常金幣消耗。')}
-function canAfford(cost){return !!S.infiniteGold||S.gold>=cost}
-function spendGold(cost){if(!S.infiniteGold)S.gold=Math.max(0,S.gold-cost)}
+const MAX_ENERGY=100;
+function fresh(){return {gold:180,energy:0,enemyGold:260,era:0,miners:[],php:1500,pBaseMax:1500,pBaseUpgrade:0,ehp:1500,eBaseMax:1500,units:[],shots:[],time:0,paused:false,over:false,speed:1,tech:{power:0,armor:0,economy:0,training:0,mineSpeed:0,mineYield:0},enemyTech:{power:0,armor:0,training:0},enemyResearchCd:24,aiReason:'正在觀察我方軍隊',defenses:{p:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0},e:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0}},enemyBuildCd:38,rage:0,enemyTimer:5,wave:1,aiEra:0,aiStyle:'balanced',spawnCount:0,baseCd:0,particles:[],bossWave:0,bossesDefeated:0,eventTimer:42,map:'plain',chapter:1,enemyScale:1,command:'advance'}}
+function say(t,priority=2){
+ if(!S){$('message').textContent=t;return}
+ if((S.messageTimer||0)>0 && priority<(S.messagePriority||0))return;
+ S.message=String(t);S.messagePriority=priority;S.messageTimer=5;
+ if($('message'))$('message').textContent=S.message;
+}
+function eraArmorFor(era){return Math.min(.16,Math.max(0,Number(era)||0)*.04)}
+function mapModifiers(){
+ if(S.map==='desert')return {enemyIncome:1.5,enemyAttack:1};
+ if(S.map==='volcano')return {enemyIncome:1,enemyAttack:1.2};
+ return {enemyIncome:1,enemyAttack:1};
+}
+function canAfford(cost){return S.gold>=cost}
+function spendGold(cost){S.gold=Math.max(0,S.gold-cost)}
 function newGame(){
  const chapter=Math.max(1,Number(localStorage.getItem('cfCampaignChapter')||1));
  S=fresh();S.chapter=chapter;S.enemyScale=1+(chapter-1)*.18;S.eBaseMax=1500+((chapter-1)*180);S.ehp=S.eBaseMax;
  $('overlay').style.display='none';
- say('戰役第 '+chapter+' 章開始！擊敗敵軍可獲得其生產費用 30% 的金幣；每 5 波出現 Boss。');
+ say('戰役第 '+chapter+' 章開始！擊敗敵軍可獲得其生產費用 30% 的金幣；每 5 波出現 Boss（擊敗可獲得額外賞金）。');
  renderButtons();ui()
 }
 function setCommand(command){S.command=command;const labels={advance:'全線推進',hold:'固守陣地',focus:'集火優先'};$('commandInfo').textContent='目前命令：'+labels[command];say('戰術命令已切換：'+labels[command]);}
-function setMap(map){S.map=map;let names={plain:'綠野平原',desert:'黃金沙漠',volcano:'熔岩前線'};say('戰場已切換：'+names[map]);ui()}
+function setMap(map){
+ if(!['plain','desert','volcano'].includes(map))return;
+ S.map=map;
+ const labels={plain:'標準戰場',desert:'敵軍資源收入 +50%',volcano:'敵軍攻擊力 +20%'};
+ say('戰場已切換：'+({plain:'綠野平原',desert:'黃金沙漠',volcano:'熔岩前線'}[map])+'｜'+labels[map]);
+ ui();
+}
 function costUnit(id){return U[id].cost}
 function train(id,enemy=false){
- const d=U[id];if(!d)return;if(!enemy&&!canAfford(d.cost)){say('金幣不足，無法訓練 '+d.n);return}
- if(enemy){S.enemyGold=(S.enemyGold||200)-d.cost;if(S.enemyGold<0)return}else spendGold(d.cost);
- const tech=enemy?(S.enemyTech||{power:0,armor:0,training:0}):S.tech,sideEra=enemy?(S.aiEra||0):(S.era||0);const hp=d.hp*(1+(enemy?0:tech.armor*.15))*(enemy?1+tech.armor*.13:1),atk=d.atk*(1+(enemy?0:tech.power*.12))*(enemy?1+tech.power*.11:1),eraArmor=Math.min(.16,sideEra*.04);
- S.units.push({id,enemy,x:enemy?890:110,hp,max:hp,atk,eraArmor,cd:Math.random()*.5,flash:0});if(!enemy)sfx('build');
- S.spawnCount++;ui()
+ const d=U[id];if(!d)return false;
+ const tech=enemy?(S.enemyTech||{power:0,armor:0,training:0}):S.tech;
+ const sideEra=enemy?(S.aiEra||0):(S.era||0);
+ if(enemy){
+  S.enemyGold=Math.max(0,Number(S.enemyGold)||0);
+  if(S.enemyGold<d.cost)return false;
+  S.enemyGold-=d.cost;
+ }else{
+  if(!canAfford(d.cost)){say('金幣不足，無法訓練 '+d.n);return false}
+  spendGold(d.cost);
+ }
+ const hp=d.hp*(1+(enemy?tech.armor*.13:tech.armor*.15));
+ const atk=d.atk*(1+(enemy?tech.power*.11:tech.power*.12))*(enemy?mapModifiers().enemyAttack:1);
+ const eraArmor=eraArmorFor(sideEra);
+ S.units.push({id,enemy,x:enemy?890:110,hp,max:hp,atk,eraArmor,cd:Math.random()*.5,flash:0});
+ if(!enemy)sfx('build');
+ S.spawnCount++;ui();return true
 }
 function renderButtons(){
  $('unitButtons').innerHTML=`<div class="muted" style="grid-column:1/-1;margin-bottom:6px">目前時代：${eras[S.era].name}｜僅顯示本時代可部署兵種</div>`+eras[S.era].units.map(id=>{let d=U[id];return `<button data-unit="${id}">${d.n}<small>${d.cost} 金幣｜攻 ${d.atk} / 血 ${d.hp}</small></button>`}).join('');
@@ -312,12 +341,19 @@ function drawMining(){
 }
 function defenseState(){if(!S.defenses)S.defenses={p:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0},e:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0}};for(const k of ['p','e']){if(!S.defenses[k])S.defenses[k]={wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0};const d=S.defenses[k];d.wallMax=d.wallMax||d.wall*700;d.turretMax=d.turretMax||d.turret*600;d.turretHp=d.turretHp||d.turretMax;}}
 function turretRange(level){return level>0?230+(level-1)*30:0;}
+function turretPosition(side){return side==='e'?822:158;}
 function buildDefense(type,enemy=false){
  defenseState();const side=enemy?'e':'p',d=S.defenses[side],level=d[type]||0,max=5;
  if(level>=max){if(!enemy)say(type==='wall'?'城牆已達最高等級。':'砲塔已達最高等級。');return false}
- const cost=(type==='wall'?220:300)*Math.pow(1.75,level);
- if(!enemy&&!canAfford(cost)){say('金幣不足！建造需要 '+Math.ceil(cost)+' 金幣。');return false}
- if(enemy){S.enemyGold=(S.enemyGold||0)-cost;if(S.enemyGold<0)return false}else spendGold(cost);
+ const cost=Math.ceil((type==='wall'?220:300)*Math.pow(1.75,level));
+ if(enemy){
+  S.enemyGold=Math.max(0,Number(S.enemyGold)||0);
+  if(S.enemyGold<cost)return false;
+  S.enemyGold-=cost;
+ }else{
+  if(!canAfford(cost)){say('金幣不足！建造需要 '+cost+' 金幣。');return false}
+  spendGold(cost);
+ }
  d[type]++;
  if(type==='wall'){d.wallHp+=700;d.wallMax=(d.wallMax||0)+700}else{d.turretHp+=600;d.turretMax=(d.turretMax||0)+600}
  if(!enemy)say((type==='wall'?'城牆':'砲塔')+'升級至 Lv.'+d[type]+'！');
@@ -332,7 +368,7 @@ function repairWall(){
 }
 function updateDefenseUI(){
  defenseState();const p=S.defenses.p;
- const wc=220*Math.pow(1.75,p.wall),tc=300*Math.pow(1.75,p.turret),missing=Math.max(0,p.wallMax-p.wallHp),rc=Math.ceil(missing*.42);
+ const wc=Math.ceil(220*Math.pow(1.75,p.wall)),tc=Math.ceil(300*Math.pow(1.75,p.turret)),missing=Math.max(0,p.wallMax-p.wallHp),rc=Math.ceil(missing*.42);
  if($('wallCost'))$('wallCost').textContent=p.wall>=5?'已達最高等級｜Lv.5/5':'消耗 '+Math.ceil(wc)+' 金幣｜Lv.'+p.wall+'/5';
  if($('turretCost'))$('turretCost').textContent=p.turret>=5?'已達最高等級｜Lv.5/5':'消耗 '+Math.ceil(tc)+' 金幣｜Lv.'+p.turret+'/5';
  if($('repairCost'))$('repairCost').textContent=missing>0?'修復 '+Math.ceil(missing)+' 耐久｜'+rc+' 金幣':'城牆完整';if($('baseUpgradeCost'))$('baseUpgradeCost').textContent=(S.pBaseUpgrade||0)>=5?'已達最高等級 Lv.5':'消耗 '+Math.ceil(450*Math.pow(1.72,S.pBaseUpgrade||0))+' 金幣｜Lv.'+(S.pBaseUpgrade||0)+'/5｜+500 基地生命';if($('defenseInfo'))$('defenseInfo').textContent='我方砲塔射程 '+turretRange(p.turret)+'｜每升1級 +30 射程｜我方城牆 Lv.'+p.wall+'/5（'+Math.ceil(p.wallHp)+'/'+p.wallMax+'）｜砲塔 Lv.'+p.turret+'/5（'+Math.ceil(p.turretHp)+'/'+p.turretMax+'）；敵方城牆 Lv.'+S.defenses.e.wall+'、砲塔 Lv.'+S.defenses.e.turret;
@@ -385,10 +421,10 @@ function togglePause(){S.paused=!S.paused;$('pause').textContent=S.paused?'繼�
 function toggleSpeed(){S.speed=S.speed===1?2:S.speed===2?3:1;$('speed').textContent=S.speed}
 function resetCampaign(){if(!confirm('確定將戰役進度重置為第 1 章？'))return;localStorage.setItem('cfCampaignChapter','1');newGame();say('戰役進度已重置為第 1 章。')}
 function saveGame(){try{localStorage.setItem('civilizationFrontlineSave',JSON.stringify(S));say('進度已儲存於此瀏覽器。')}catch(e){say('儲存失敗：瀏覽器可能限制本機儲存。')}}
-function loadGame(){try{let x=localStorage.getItem('civilizationFrontlineSave');if(!x)return say('找不到已儲存的進度。');S=JSON.parse(x);S.infiniteGold=!!S.infiniteGold;S.miners=S.miners||[];S.tech=S.tech||{power:0,armor:0,economy:0,training:0};S.tech.mineSpeed=S.tech.mineSpeed??S.mineSpeed??0;S.tech.mineYield=S.tech.mineYield??S.mineYield??0;S.pBaseUpgrade=S.pBaseUpgrade||0;S.pBaseMax=S.pBaseMax||1500+(S.era||0)*450+S.pBaseUpgrade*500;S.eBaseMax=S.eBaseMax||1500+((S.chapter||1)-1)*180+(S.aiEra||0)*450;S.php=Math.min(S.pBaseMax,S.php);S.ehp=Math.min(S.eBaseMax,S.ehp);S.tech.mineSpeed=S.tech.mineSpeed||0;S.tech.mineYield=S.tech.mineYield||0;S.enemyTech=S.enemyTech||{power:0,armor:0,training:0};S.defenses=S.defenses||{p:{wall:0,turret:0,wallHp:0},e:{wall:0,turret:0,wallHp:0}};for(const k of ['p','e']){let d=S.defenses[k];d.wallMax=d.wallMax||d.wall*700;d.turretMax=d.turretMax||d.turret*600;d.turretHp=d.turretHp||d.turretMax;}S.enemyBuildCd=S.enemyBuildCd??38;S.enemyResearchCd=S.enemyResearchCd??24;S.aiReason=S.aiReason||'正在觀察我方軍隊';S.paused=false;S.over=false;$('overlay').style.display='none';renderButtons();ui();say('進度載入成功！')}catch(e){say('讀取存檔失敗。')}}
+function loadGame(){try{let x=localStorage.getItem('civilizationFrontlineSave');if(!x)return say('找不到已儲存的進度。');S=JSON.parse(x);S.energy=Math.max(0,Math.min(MAX_ENERGY,Number(S.energy)||0));S.enemyGold=Math.max(0,Number.isFinite(Number(S.enemyGold))?Number(S.enemyGold):260);S.messageTimer=0;S.messagePriority=0;S.miners=S.miners||[];S.units=S.units||[];S.units.forEach(u=>{if(!Number.isFinite(u.eraArmor))u.eraArmor=eraArmorFor(u.enemy?(S.aiEra||0):(S.era||0));});S.tech=S.tech||{power:0,armor:0,economy:0,training:0};S.tech.mineSpeed=S.tech.mineSpeed??S.mineSpeed??0;S.tech.mineYield=S.tech.mineYield??S.mineYield??0;S.pBaseUpgrade=S.pBaseUpgrade||0;S.pBaseMax=S.pBaseMax||1500+(S.era||0)*450+S.pBaseUpgrade*500;S.eBaseMax=S.eBaseMax||1500+((S.chapter||1)-1)*180+(S.aiEra||0)*450;S.php=Math.min(S.pBaseMax,S.php);S.ehp=Math.min(S.eBaseMax,S.ehp);S.tech.mineSpeed=S.tech.mineSpeed||0;S.tech.mineYield=S.tech.mineYield||0;S.enemyTech=S.enemyTech||{power:0,armor:0,training:0};S.defenses=S.defenses||{p:{wall:0,turret:0,wallHp:0},e:{wall:0,turret:0,wallHp:0}};for(const k of ['p','e']){let d=S.defenses[k];d.wallMax=d.wallMax||d.wall*700;d.turretMax=d.turretMax||d.turret*600;d.turretHp=d.turretHp||d.turretMax;}S.enemyBuildCd=S.enemyBuildCd??38;S.enemyResearchCd=S.enemyResearchCd??24;S.aiReason=S.aiReason||'正在觀察我方軍隊';S.paused=false;S.over=false;$('overlay').style.display='none';renderButtons();ui();say('進度載入成功！')}catch(e){say('讀取存檔失敗。')}}
 function ui(){
- $('campaignInfo').textContent='戰役章節 '+S.chapter+'｜敵軍強度 '+Math.round((S.enemyScale||1)*100)+'%｜克制：遠程＞近戰、近戰＞攻城、攻城＞遠程';if($('aiInfo'))$('aiInfo').textContent='敵軍 AI：'+({balanced:'均衡編隊',rush:'快速突擊',range:'遠程壓制',intercept:'近戰攔截',defense:'基地防守'}[S.aiStyle]||'觀察中')+'｜'+(S.aiReason||'分析戰場中')+'｜敵軍科技 攻'+(S.enemyTech?.power||0)+' 防'+(S.enemyTech?.armor||0)+' 速'+(S.enemyTech?.training||0);$('commandInfo').textContent='目前命令：'+({advance:'全線推進',hold:'固守陣地',focus:'集火優先'}[S.command||'advance']);
- $('gold').textContent=S.infiniteGold?'∞':Math.floor(S.gold);if($('infiniteGoldBtn'))$('infiniteGoldBtn').textContent=S.infiniteGold?'∞ 無限金幣：開':'∞ 無限金幣：關';if($('minerCost'))$('minerCost').textContent=S.miners.length>=8?'已達上限 8 人':'消耗 '+Math.ceil(80*Math.pow(1.22,S.miners.length))+' 金幣｜目前 '+S.miners.length+'/8 人';if($('mineInfo'))$('mineInfo').textContent='礦工 '+S.miners.length+' 人｜採礦速度 Lv.'+(S.tech.mineSpeed||0)+'｜單趟運回 '+(25+(S.tech.mineYield||0)*15)+' 金幣｜礦工自動往返，運回即入帳。';updateDefenseUI();$('energy').textContent=Math.floor(S.energy);
+ $('campaignInfo').textContent='戰役章節 '+S.chapter+'｜敵軍強度 '+Math.round((S.enemyScale||1)*100)+'%｜地圖效果：'+(S.map==='desert'?'敵軍資源收入 +50%':S.map==='volcano'?'敵軍攻擊力 +20%':'標準')+'｜克制：遠程＞近戰、近戰＞攻城、攻城＞遠程';if($('aiInfo'))$('aiInfo').textContent='敵軍 AI：'+({balanced:'均衡編隊',rush:'快速突擊',range:'遠程壓制',intercept:'近戰攔截',defense:'基地防守'}[S.aiStyle]||'觀察中')+'｜'+(S.aiReason||'分析戰場中')+'｜敵軍科技 攻'+(S.enemyTech?.power||0)+' 防'+(S.enemyTech?.armor||0)+' 速'+(S.enemyTech?.training||0);$('commandInfo').textContent='目前命令：'+({advance:'全線推進',hold:'固守陣地',focus:'集火優先'}[S.command||'advance']);
+ $('gold').textContent=Math.floor(S.gold);if($('minerCost'))$('minerCost').textContent=S.miners.length>=8?'已達上限 8 人':'消耗 '+Math.ceil(80*Math.pow(1.22,S.miners.length))+' 金幣｜目前 '+S.miners.length+'/8 人';if($('mineInfo'))$('mineInfo').textContent='礦工 '+S.miners.length+' 人｜採礦速度 Lv.'+(S.tech.mineSpeed||0)+'｜單趟運回 '+(25+(S.tech.mineYield||0)*15)+' 金幣｜礦工自動往返，運回即入帳。';updateDefenseUI();$('energy').textContent=Math.floor(S.energy);
  const skillCosts={bombard:45,heal:55,rage:65};
  document.querySelectorAll('#skillDock button').forEach(b=>{const type=b.classList.contains('bombard')?'bombard':b.classList.contains('heal')?'heal':'rage';b.disabled=S.energy<skillCosts[type]||S.over;});$('era').textContent=eras[S.era].name;$('php').textContent=Math.max(0,Math.ceil(S.php));$('ehp').textContent=Math.max(0,Math.ceil(S.ehp));$('pmax').textContent=S.pBaseMax||1500;$('emax').textContent=S.eBaseMax||1500;$('pbar').style.width=Math.max(0,S.php/(S.pBaseMax||1500)*100)+'%';$('ebar').style.width=Math.max(0,S.ehp/(S.eBaseMax||1500)*100)+'%';$('evolve').textContent=S.era===eras.length-1?'已達最高時代':'⬆️ 進化：'+eras[S.era+1].name+'（'+eras[S.era+1].cost+' 金幣）';$('banner').textContent=eras[S.era].name+'｜第 '+S.wave+' 波'}
 function eraDamage(attackerId, defenderEra){
@@ -410,30 +446,33 @@ function burst(x,y,color,count=8){
  for(let i=0;i<count;i++){let ang=Math.random()*Math.PI*2,spd=35+Math.random()*100;
  S.particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:.35+Math.random()*.35,max:.7,color,size:2+Math.random()*3});}
 }
-function update(dt){if(S.paused||S.over)return;dt*=S.speed;S.time+=dt;S.gold+=(8+S.tech.economy*2.4)*dt;S.energy+=1.6*dt;updateMiners(dt);S.rage=Math.max(0,S.rage-dt);S.eventTimer-=dt;S.enemyTimer-=dt;S.baseCd-=dt;
+function update(dt){if(S.paused||S.over)return;dt*=S.speed;S.time+=dt;if(S.messageTimer>0){S.messageTimer=Math.max(0,S.messageTimer-dt);if(S.messageTimer===0)S.messagePriority=0;}S.gold+=8*(1+(S.tech.economy||0)*.2)*dt;S.energy=Math.min(MAX_ENERGY,S.energy+1.6*dt);updateMiners(dt);S.rage=Math.max(0,S.rage-dt);S.eventTimer-=dt;S.enemyTimer-=dt;S.baseCd-=dt;
  if(S.eventTimer<=0){triggerEvent();S.eventTimer=48+Math.random()*28}
  if(S.enemyTimer<=0){enemyWave();S.enemyTimer=Math.max(2.3,6.2-S.time/150)+Math.random()*1.7}
  for(const u of S.units){let d=U[u.id],dir=u.enemy?-1:1;u.cd-=dt;let target=null,best=9999;
  for(const v of S.units){if(v.enemy!==u.enemy){let dist=Math.abs(v.x-u.x);if(dist<=d.range+U[v.id].sz+7){let score=dist;if(v.id==='shieldguard')score-=34;if(!u.enemy&&S.command==='focus')score=dist*.22+Math.max(0,v.hp)*.035;if(score<best){best=score;target=v}}}}
- if(target){if(u.cd<=0){let boost=(!u.enemy&&S.rage>0?1.8:1);let counter=matchup(u.id,target.id),eraMult=eraDamage(u.id,U[target.id].era);if(counter>1&&U[u.id].era<U[target.id].era)eraMult=1-(1-eraMult)*.5;let damage=u.atk*boost*counter*eraMult*(1-(target.eraArmor||0));let escort=S.units.some(s=>s.enemy===target.enemy&&s.id==='shieldguard'&&Math.abs(s.x-target.x)<58&&((target.enemy&&s.x>target.x)||(!target.enemy&&s.x<target.x)));if(escort&&target.id!=='shieldguard'){damage*=.68;let guard=S.units.find(s=>s.enemy===target.enemy&&s.id==='shieldguard'&&Math.abs(s.x-target.x)<58&&((target.enemy&&s.x>target.x)||(!target.enemy&&s.x<target.x)));if(guard)guard.blockAnim=.22;}target.hp-=damage;target.flash=.12;u.attackAnim=.24;if(u.id==='knight'||u.id==='chariot')u.chargeAnim=.3;if(['cannon','tank','mech','ram'].includes(u.id))u.recoilAnim=.18;sfx(d.kind==='range'?'shot':'slash');sfx('hit');target.hitAnim=.12;burst(target.x,278,u.enemy?'#ff927e':'#e8f7ff',3);u.cd=d.rate*(1-(u.enemy?(S.enemyTech?.training||0)*.045:S.tech.training*.055));S.shots.push({x:u.x,y:278,tx:target.x,ty:278,t:.18,max:.18,enemy:u.enemy,kind:d.kind})}}
+ if(target){if(u.cd<=0){let boost=(!u.enemy&&S.rage>0?1.8:1);let counter=matchup(u.id,target.id),eraMult=eraDamage(u.id,U[target.id].era);if(counter>1&&U[u.id].era<U[target.id].era)eraMult=1-(1-eraMult)*.5;let damage=u.atk*boost*counter*eraMult*(1-(target.eraArmor||0));let escort=S.units.some(s=>s.enemy===target.enemy&&s.id==='shieldguard'&&Math.abs(s.x-target.x)<58&&((target.enemy&&s.x>target.x)||(!target.enemy&&s.x<target.x)));if(escort&&target.id!=='shieldguard'){damage*=.68;let guard=S.units.find(s=>s.enemy===target.enemy&&s.id==='shieldguard'&&Math.abs(s.x-target.x)<58&&((target.enemy&&s.x>target.x)||(!target.enemy&&s.x<target.x)));if(guard)guard.blockAnim=.22;}target.hp-=damage;target.flash=.12;u.attackAnim=.24;if(u.id==='knight'||u.id==='chariot')u.chargeAnim=.3;if(['cannon','tank','mech','ram'].includes(u.id))u.recoilAnim=.18;sfx(d.kind==='range'?'shot':'slash');sfx('hit');target.hitAnim=.12;burst(target.x,278,u.enemy?'#ff927e':'#e8f7ff',3);u.cd=d.rate/(1+(u.enemy?(S.enemyTech?.training||0)*.08:(S.tech.training||0)*.08));S.shots.push({x:u.x,y:278,tx:target.x,ty:278,t:.18,max:.18,enemy:u.enemy,kind:d.kind})}}
  else{
  let targetSide=u.enemy?'p':'e',base=u.enemy?110:890,wall=S.defenses?.[targetSide],wallX=targetSide==='p'?185:795,wallActive=wall&&wall.wall>0&&wall.wallHp>0;
  // 砲塔必須位於城牆內側（靠近己方基地），與前線城牆保持明確間距。
  let turretX=wallX+(targetSide==='p'?-27:27),turretActive=wall&&wall.turret>0&&wall.turretHp>0,objective=wallActive?wallX:turretActive?turretX:base,distToObjective=Math.abs(objective-u.x);
  // 攻擊順序：先城牆，再城牆內側砲塔，最後基地。
  let atTurret=!wallActive&&turretActive&&Math.abs(turretX-u.x)<=d.range+22,holdLine=360;
- if(!u.enemy&&S.command==='hold'&&u.x>=holdLine){if(u.cd<=0&&Math.abs(base-u.x)<=d.range+12){baseDamage('e',u.atk);u.cd=d.rate}}
- else if(atTurret&&u.cd<=0){
+ // 固守模式只守住中線；不允許繞過城牆／砲塔直接攻擊基地。
+ const holdingLine=!u.enemy&&S.command==='hold'&&u.x>=holdLine;
+ if(holdingLine){
+   // 停留在防線位置，敵軍進入射程時仍會由上方交戰邏輯處理。
+ }else if(atTurret&&u.cd<=0){
    let defenderEra=u.enemy?(S.era||0):(S.aiEra||0);let td=u.atk*(d.kind==='siege'?1.8:1)*eraDamage(u.id,defenderEra)*(1-Math.min(.16,defenderEra*.04));u.attackAnim=.24;u.recoilAnim=.18;S.shots.push({x:u.x,y:264,tx:turretX,ty:190,t:.26,max:.26,enemy:u.enemy,big:d.kind==='siege',kind:'siege'});wall.turretHp=Math.max(0,wall.turretHp-td);
    burst(turretX,190,wall.turretHp<=0?'#e2c58b':'#b9d8e8',wall.turretHp<=0?14:4);
-   if(wall.turretHp<=0){wall.turretRuins=true;wall.turretRuinsUntil=S.time+45;wall.turret=0;wall.turretMax=0;say((targetSide==='p'?'我方':'敵方')+'砲塔遭到摧毀！')}
+   if(wall.turretHp<=0){wall.turretRuins=true;wall.turretRuinsUntil=S.time+45;wall.turret=0;wall.turretMax=0;say((targetSide==='p'?'我方':'敵方')+'砲塔遭到摧毀！',u.enemy?0:2)}
    u.cd=d.rate;
  }else if(distToObjective<=d.range+12){
    if(u.cd<=0){
      if(wallActive){
        let mult=d.kind==='siege'?(u.id==='ram'?3.2:u.id==='cannon'?2.3:1.8):1;
        u.recoilAnim=.18;S.shots.push({x:u.x,y:265,tx:wallX+8,ty:265,t:.3,max:.3,enemy:u.enemy,big:d.kind==='siege',kind:u.id==='cannon'||u.id==='tank'?'shell':'siege'});let wallEra=u.enemy?(S.era||0):(S.aiEra||0);wall.wallHp=Math.max(0,wall.wallHp-u.atk*mult*eraDamage(u.id,wallEra)*(1-Math.min(.16,wallEra*.04)));burst(wallX,278,wall.wallHp<=0?'#d7c7a4':'#b9c9d8',wall.wallHp<=0?18:5);
-       if(wall.wallHp<=0){wall.ruins=true;wall.ruinsUntil=S.time+60;wall.wall=0;wall.wallMax=0;say((targetSide==='p'?'我方':'敵方')+'前線城牆被摧毀！')}
+       if(wall.wallHp<=0){wall.ruins=true;wall.ruinsUntil=S.time+60;wall.wall=0;wall.wallMax=0;say((targetSide==='p'?'我方':'敵方')+'前線城牆被摧毀！',u.enemy?0:2)}
      }else{if(u.enemy)baseDamage('p',u.atk*eraDamage(u.id,S.era||0));else baseDamage('e',u.atk*eraDamage(u.id,S.aiEra||0))}
      u.cd=d.rate;
    }
@@ -443,8 +482,11 @@ function update(dt){if(S.paused||S.over)return;dt*=S.speed;S.time+=dt;S.gold+=(8
  S.units.forEach(u=>{if(u.hp<=0&&!u.deadFx){
  u.deadFx=true;burst(u.x,280,u.enemy?'#ff7d70':'#ffe0a0',18);sfx('death');burst(u.x,270,'#d7e0e2',7);
  if(u.enemy){
-   const bounty=Math.floor((U[u.id]?.cost||0)*0.30);
-   if(bounty>0){S.gold+=bounty;burst(u.x,252,'#f3c66b',5)}
+   const bounty=Number.isFinite(u.bounty)?u.bounty:(u.id==='boss'?300:Math.floor((U[u.id]?.cost||0)*0.30));
+   if(bounty>0){
+    S.gold+=bounty;burst(u.x,252,'#f3c66b',5);
+    say((u.id==='boss'?'🏆 Boss 擊敗！':'敵軍擊破！')+'獲得 '+bounty+' 金幣。',1);
+   }
    if(u.id==='boss')S.bossesDefeated++;
  }
  }});
@@ -453,15 +495,30 @@ function update(dt){if(S.paused||S.over)return;dt*=S.speed;S.time+=dt;S.gold+=(8
  S.particles=S.particles.filter(p=>p.life>0);
  // Adaptive AI: reassess player composition, enemy-base danger and research needs.
  if(S.baseCd<=0){analyzeBattlefield();S.baseCd=7.5}
- S.enemyBuildCd=(S.enemyBuildCd??38)-dt;if(S.enemyBuildCd<=0){defenseState();let side=S.defenses.e;if(side.wall>0&&side.wallHp<side.wallMax*.42&&(S.enemyGold||0)>=Math.ceil((side.wallMax-side.wallHp)*.3)){let repair=Math.min(side.wallMax-side.wallHp,Math.floor((S.enemyGold||0)/.3));S.enemyGold-=Math.ceil(repair*.3);side.wallHp+=repair;say('敵軍正在修復前線城牆！')}else if(side.wall<5&&side.wallHp<420)buildDefense('wall',true);else if(side.turret<5)buildDefense('turret',true);else if(side.wall<5)buildDefense('wall',true);S.enemyBuildCd=Math.max(27,43-S.time/300)}
+ S.enemyBuildCd=(S.enemyBuildCd??38)-dt;if(S.enemyBuildCd<=0){
+  defenseState();const side=S.defenses.e;S.enemyGold=Math.max(0,Number(S.enemyGold)||0);
+  const missing=Math.max(0,side.wallMax-side.wallHp);
+  if(side.wall>0&&missing>0&&S.enemyGold>=Math.ceil(missing*.3)){
+   const repair=Math.min(missing,Math.floor(S.enemyGold/.3));
+   const repairCost=Math.ceil(repair*.3);
+   if(repair>0&&repairCost<=S.enemyGold){
+    S.enemyGold=Math.max(0,S.enemyGold-repairCost);
+    side.wallHp=Math.min(side.wallMax,side.wallHp+repair);
+    say('敵軍正在修復前線城牆！',0);
+   }
+  }else if(side.wall<5&&side.wallHp<420)buildDefense('wall',true);
+  else if(side.turret<5)buildDefense('turret',true);
+  else if(side.wall<5)buildDefense('wall',true);
+  S.enemyBuildCd=Math.max(27,43-S.time/300)
+ }
  S.enemyResearchCd=(S.enemyResearchCd??24)-dt;
  if(S.enemyResearchCd<=0){enemyResearch();S.enemyResearchCd=Math.max(17,29-S.time/260)+Math.random()*7}
- for(let side of [false,true]){defenseState();let lvl=S.defenses[side?'e':'p'].turret,range=turretRange(lvl);let t=S.units.filter(u=>u.enemy!==side&&Math.abs(u.x-(side?890:110))<=range).sort((a,b)=>Math.abs(a.x-(side?890:110))-Math.abs(b.x-(side?890:110)))[0];if(t&&lvl>0){if(!S.turretCd)S.turretCd={p:0,e:0};let k=side?'e':'p';S.turretCd[k]-=dt;if(S.turretCd[k]<=0){
+ for(let side of [false,true]){defenseState();let key=side?'e':'p',lvl=S.defenses[key].turret,range=turretRange(lvl),towerX=turretPosition(key);let t=S.units.filter(u=>u.enemy!==side&&Math.abs(u.x-towerX)<=range).sort((a,b)=>Math.abs(a.x-towerX)-Math.abs(b.x-towerX))[0];if(t&&lvl>0){if(!S.turretCd)S.turretCd={p:0,e:0};let k=side?'e':'p';S.turretCd[k]-=dt;if(S.turretCd[k]<=0){
    const turretEra=side?(S.aiEra||0):(S.era||0),targetEra=U[t.id]?.era??0,gap=turretEra-targetEra;
    const eraBonus=gap>=0?1+gap*.18:Math.max(.55,1+gap*.10);
    const eraArmor=Math.min(.16,targetEra*.04);
-   const turretDamage=(42+lvl*38)*eraBonus*(1-eraArmor);
-   t.hp-=turretDamage;burst(t.x,278,side?'#ff9b8b':'#8be6ff',5);burst(side?794:186,side?174:178,side?'#ff9b8b':'#8be6ff',4);S.turretFlash=S.turretFlash||{p:0,e:0};S.turretFlash[k]=.12;S.turretCd[k]=Math.max(.65,1.65-lvl*.22);S.shots.push({x:side?794:186,y:side?174:178,tx:t.x,ty:278,t:.18,max:.18,enemy:side,kind:'turret'})
+   const turretDamage=(42+lvl*38)*eraBonus*(1-eraArmor)*(side?mapModifiers().enemyAttack:1);
+   t.hp-=turretDamage;burst(t.x,278,side?'#ff9b8b':'#8be6ff',5);burst(towerX,side?176:180,side?'#ff9b8b':'#8be6ff',4);S.turretFlash=S.turretFlash||{p:0,e:0};S.turretFlash[k]=.12;S.turretCd[k]=Math.max(.65,1.65-lvl*.22);S.shots.push({x:towerX,y:side?176:180,tx:t.x,ty:278,t:.18,max:.18,enemy:side,kind:'turret'})
  }}}
  S.shots.forEach(s=>s.t-=dt);S.shots=S.shots.filter(s=>s.t>0);if(S.turretFlash){S.turretFlash.p=Math.max(0,S.turretFlash.p-dt);S.turretFlash.e=Math.max(0,S.turretFlash.e-dt);}
  if(S.php<=0||S.ehp<=0){
@@ -510,7 +567,7 @@ function enemyResearch(){
  if(pick==='power')enemy.forEach(u=>u.atk*=1.11);
  if(pick==='armor')enemy.forEach(u=>{u.max*=1.13;u.hp*=1.13});
  const names={power:'武器強化',armor:'裝甲強化',training:'快速操演'};
- say('🧠 敵軍完成科技研究：'+names[pick]+' Lv.'+tech[pick]+'！');
+ say('🧠 敵軍完成科技研究：'+names[pick]+' Lv.'+tech[pick]+'！',0);
 }
 function chooseEnemyUnit(available){
  const own=S.units.filter(u=>!u.enemy);
@@ -535,37 +592,40 @@ function chooseEnemyUnit(available){
  return preferred[Math.floor(Math.random()*Math.min(preferred.length,2))]||available[0];
 }
 function enemyWave(){
- let maxEra=Math.min(eras.length-1,Math.floor(S.time/95));if(maxEra>(S.aiEra||0)){let gained=maxEra-(S.aiEra||0);S.aiEra=maxEra;S.eBaseMax=(S.eBaseMax||1500)+gained*450;S.ehp+=gained*450;}
+ let maxEra=Math.min(eras.length-1,Math.floor(S.time/95));
+ if(maxEra>(S.aiEra||0)){let gained=maxEra-(S.aiEra||0);S.aiEra=maxEra;S.eBaseMax=(S.eBaseMax||1500)+gained*450;S.ehp+=gained*450;}
+ const tech=S.enemyTech||{power:0,armor:0,training:0},mods=mapModifiers(),scale=S.enemyScale||1;
  if(S.wave%5===0 && S.bossWave!==S.wave){
   S.bossWave=S.wave;
-  const tech=S.enemyTech||{power:0,armor:0};
-  const hp=(2600+S.wave*180)*(S.enemyScale||1)*(1+tech.armor*.08);
-  S.units.push({id:'boss',enemy:true,x:890,hp,max:hp,atk:(155+S.wave*9)*(S.enemyScale||1)*(1+tech.power*.08),cd:1,flash:0});
-  say('⚠️ Boss 警報！第 '+S.wave+' 波「戰爭巨獸」出現！');
+  const hp=(2600+S.wave*180)*scale*(1+tech.armor*.08);
+  const atk=(155+S.wave*9)*scale*(1+tech.power*.08)*mods.enemyAttack;
+  const bounty=300+Math.floor(S.wave/5)*50;
+  S.units.push({id:'boss',enemy:true,x:890,hp,max:hp,atk,eraArmor:eraArmorFor(S.aiEra||0),bounty,cd:1,flash:0});
+  say('⚠️ Boss 警報！第 '+S.wave+' 波「戰爭巨獸」出現！',1);
   return;
  }
  const available=eras[S.aiEra].units;
  let id=chooseEnemyUnit(available);
- // The AI has a growing economy and can save for stronger counters.
- S.enemyGold=(S.enemyGold||260)+118;
+ // AI 經濟依戰場調整：沙漠每波資源收入提高 50%。
+ S.enemyGold=Math.max(0,Number.isFinite(Number(S.enemyGold))?Number(S.enemyGold):260)+118*mods.enemyIncome;
  if(S.enemyGold<U[id].cost){
-   const affordable=available.filter(x=>U[x].cost<=S.enemyGold);
-   id=affordable.sort((a,b)=>U[b].hp+U[b].atk-U[a].hp-U[a].atk)[0]||available[0];
+  const affordable=available.filter(x=>U[x].cost<=S.enemyGold);
+  if(!affordable.length){say('敵軍正在累積資源，暫時無法部署更昂貴的兵種。',0);return;}
+  id=affordable.sort((a,b)=>(U[b].hp+U[b].atk)-(U[a].hp+U[a].atk))[0];
  }
  S.enemyGold=Math.max(0,S.enemyGold-U[id].cost);
- const e=U[id],scale=S.enemyScale||1,tech=S.enemyTech||{power:0,armor:0};
- const hp=e.hp*(1+S.aiEra*.12)*scale*(1+tech.armor*.13);
- const atk=e.atk*(1+S.aiEra*.1)*scale*(1+tech.power*.11);
- S.units.push({id,enemy:true,x:890,hp,max:hp,atk,cd:Math.random()*.6,flash:0});
- if(S.aiEra>S.era&&Math.random()<.4)say('警告：敵方科技領先！盡快進化或研究武器科技。');
+ const e=U[id];
+ const hp=e.hp*(1+(S.aiEra||0)*.12)*scale*(1+tech.armor*.13);
+ const atk=e.atk*(1+(S.aiEra||0)*.1)*scale*(1+tech.power*.11)*mods.enemyAttack;
+ S.units.push({id,enemy:true,x:890,hp,max:hp,atk,eraArmor:eraArmorFor(S.aiEra||0),cd:Math.random()*.6,flash:0});
+ if(S.aiEra>S.era&&Math.random()<.4)say('警告：敵方科技領先！盡快進化或研究武器科技。',0);
 }
 function triggerEvent(){
  const events=[
   ()=>{S.gold+=150;say('📦 商隊抵達：獲得 150 金幣！')},
-  ()=>{S.energy=Math.min(100,S.energy+28);say('⚡ 能量風暴：能量增加 28！')},
+  ()=>{S.energy=Math.min(MAX_ENERGY,S.energy+28);say('⚡ 能量風暴：能量增加 28！')},
   ()=>{S.units.filter(u=>!u.enemy).forEach(u=>u.hp=Math.min(u.max,u.hp+85));say('🌧️ 戰地補給：我方部隊恢復生命！')},
-  ()=>{S.units.filter(u=>u.enemy).forEach(u=>u.hp-=100);say('☄️ 隕石墜落：敵軍全體受到 100 傷害！')},
-  ()=>{if(!S.infiniteGold)S.gold=Math.max(0,S.gold-65);say(S.infiniteGold?'🦹 敵軍劫掠事件發生，但測試模式不扣除金幣。':'🦹 敵軍劫掠：損失 65 金幣！')}
+  ()=>{S.units.filter(u=>u.enemy).forEach(u=>u.hp-=100);say('☄️ 隕石墜落：敵軍全體受到 100 傷害！')}
  ];
  events[Math.floor(Math.random()*events.length)]();burst(500,180,'#ffe08a',18);ui()
 }
@@ -662,7 +722,7 @@ function drawFortification(enemy){
    g.fillStyle=enemy?'#d47b76':'#79b8ca';g.fillRect(-18,226,36*Math.max(0,d.turretHp/(d.turretMax||420)),3);
    g.restore();
    const flash=S.turretFlash?.[enemy?'e':'p']||0;
-   if(flash>0){g.save();g.globalAlpha=Math.min(1,flash/.12);g.fillStyle=enemy?'#e9b4a7':'#b5dce5';g.shadowBlur=12;g.shadowColor=enemy?'#c77d72':'#83bdca';g.beginPath();g.arc(x,enemy?176:180,4+flash*30,0,Math.PI*2);g.fill();g.restore();}
+   if(flash>0){const flashX=x-dir*27;g.save();g.globalAlpha=Math.min(1,flash/.12);g.fillStyle=enemy?'#e9b4a7':'#b5dce5';g.shadowBlur=12;g.shadowColor=enemy?'#c77d72':'#83bdca';g.beginPath();g.arc(flashX,enemy?176:180,4+flash*30,0,Math.PI*2);g.fill();g.restore();}
  }
  // 城牆維持在前線位置；砲塔已向基地內側錯開，避免與城牆柱體重疊。
  if(d.wall>0){
