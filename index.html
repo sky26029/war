@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>文明戰線 V16：兵種差異與動態戰場版</title>
+<style>
+
+:root{
+ --bg:#080e18;--panel:#111d2b;--panel2:#18283a;--line:#344b60;
+ --gold:#f3c66b;--blue:#55d5e8;--red:#f06b65;--green:#8bd6a4;
+ --ink:#edf4f5;--muted:#8ea5b4;
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
+ background:radial-gradient(ellipse at 50% -10%,#294153 0,#111e2b 42%,#070c14 100%);min-height:100vh}
+main{max-width:1280px;margin:auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+ margin-bottom:14px;padding:15px 18px;border:1px solid #3a5367;border-radius:15px;
+ background:linear-gradient(110deg,#192c3bdf,#0d1723f2);box-shadow:0 12px 32px #0005;position:relative;overflow:hidden}
+header:after{content:"";position:absolute;right:-55px;top:-95px;width:260px;height:220px;border:1px solid #f3c66b22;
+ transform:rotate(35deg);box-shadow:0 0 0 18px #f3c66b08,0 0 0 38px #f3c66b06;pointer-events:none}
+h1{font-size:clamp(21px,3vw,30px);margin:0;letter-spacing:1px;color:#fff}
+header .muted{margin-top:5px;letter-spacing:2px;text-transform:uppercase;color:#9bb4c0}
+.stats{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1}
+.pill{background:linear-gradient(180deg,#24394a,#142434);border:1px solid #466074;border-radius:9px;
+ padding:8px 12px;font-weight:800;font-size:13px;box-shadow:inset 0 1px #ffffff12}
+.pill:first-child{border-color:#92713d;color:#ffe1a0}
+#arena{border:1px solid #648096;border-radius:13px;overflow:hidden;background:#9bb9ad;position:relative;
+ box-shadow:0 18px 45px #0008,0 0 0 4px #ffffff08}
+canvas{width:100%;height:auto;display:block}
+.hud{display:flex;gap:16px;background:linear-gradient(90deg,#0b1925,#132638,#0b1925);padding:11px 15px;border-top:1px solid #71899a}
+.base{flex:1;font-size:12px;font-weight:750;letter-spacing:.4px}.bar{height:10px;background:#263747;border:1px solid #526779;
+ border-radius:3px;overflow:hidden;margin-top:5px}.fill{height:100%;transition:width .2s}
+.pfill{background:linear-gradient(90deg,#238fb7,#71e0e9);box-shadow:0 0 12px #55d5e888}
+.efill{background:linear-gradient(90deg,#c84d4d,#ff9b66);box-shadow:0 0 12px #f06b6588}
+#banner{position:absolute;top:13px;left:50%;transform:translateX(-50%);padding:7px 17px;
+ background:#101d2be8;border:1px solid #d9b66a;border-radius:5px;color:#ffe4a8;font-weight:900;
+ font-size:13px;white-space:nowrap;box-shadow:0 4px 16px #0007;letter-spacing:1px}
+#overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#07101ddd;padding:16px;text-align:center}
+.modal{background:linear-gradient(145deg,#20384a,#101b29);border:1px solid #d6b46c;border-radius:12px;padding:25px;max-width:390px;box-shadow:0 18px 60px #000b}
+.modal h2{margin:0 0 8px;color:#ffe1a0}.modal p{color:#c4d4e7}
+.panels{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;margin-top:12px}
+.panel{background:linear-gradient(145deg,#17283a,#101b29);border:1px solid #344e63;border-radius:11px;padding:13px;
+ box-shadow:0 8px 22px #0003;position:relative}
+.panel:before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;background:linear-gradient(#e5bd6c,#e5bd6c00)}
+.panel h3{font-size:14px;margin:0 0 10px;color:#f2d99e;letter-spacing:.8px;padding-left:5px}
+.muted{color:var(--muted);font-size:12px;line-height:1.55}
+.buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.techs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+button{border:1px solid #48647a;border-radius:7px;background:linear-gradient(180deg,#29465b,#172b3d);
+ color:#f4f8f8;padding:10px 8px;font:750 13px system-ui;cursor:pointer;min-height:51px;
+ box-shadow:0 3px 0 #07111b, inset 0 1px #ffffff12;transition:transform .13s,border-color .13s,filter .13s}
+button:hover:not(:disabled){transform:translateY(-2px);border-color:#e0bd70;filter:brightness(1.13)}
+button:active{transform:translateY(1px);box-shadow:0 1px 0 #07111b}
+button:disabled{opacity:.38;cursor:not-allowed;filter:grayscale(.7)}
+button small{display:block;color:#f1cb79;font-size:11px;margin-top:4px;font-weight:650}
+.coin-icon{display:inline-block;vertical-align:-2px;width:15px;height:15px;border-radius:50%;
+ background:radial-gradient(circle at 35% 30%,#fff2a6 0 12%,#ffd34d 13% 55%,#bd791b 75%);
+ border:1px solid #ffe18a;box-shadow:0 0 0 1px #7d551b inset;position:relative}
+.coin-icon:after{content:'$';position:absolute;inset:-1px 0 0;text-align:center;color:#8b5b12;font:bold 10px/14px Georgia}
+.special{background:linear-gradient(180deg,#624d78,#332944);border-color:#9276a8}
+.evolve{background:linear-gradient(180deg,#9b7839,#58411e);border-color:#d7b46c;color:#fff0c8}
+#message{min-height:28px;text-align:center;color:#d5e2e4;font-size:12px;margin:11px 0 3px;
+ padding:8px;border:1px dashed #40596c;border-radius:6px;background:#0d1925}
+.bottom{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding:10px;background:#0d1824;border:1px solid #293e50;border-radius:9px}
+.bottom button{min-height:40px;flex:1}.bottom button#sound{border-color:#4e8791;color:#a9efff}
+footer{text-align:center;color:#71899a;font-size:11px;margin:14px}
+@media(max-width:700px){
+ main{padding:8px}.panels{grid-template-columns:1fr}.buttons{grid-template-columns:repeat(2,1fr)}
+ .pill{font-size:12px;padding:7px 9px}.hud{gap:8px;padding:9px}.base{font-size:11px}
+ #banner{font-size:11px;max-width:90%;overflow:hidden;text-overflow:ellipsis}
+ .bottom button{min-width:30%}
+}
+
+ 
+#skillDock{position:absolute;z-index:4;left:50%;bottom:13px;transform:translateX(-50%);display:flex;gap:10px;align-items:flex-end;pointer-events:none}
+.skillIcon{pointer-events:auto;width:86px;min-height:86px;padding:7px 5px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+ border:1px solid #9bb4c7;border-radius:12px;background:linear-gradient(155deg,#263f55ee,#101d2bee);color:#f2f7fb;
+ box-shadow:0 5px 15px #0009,inset 0 1px #ffffff30;cursor:pointer;transition:transform .12s,border-color .12s,filter .12s}
+.skillIcon:hover:not(:disabled){transform:translateY(-4px);border-color:#ffe0a0;filter:brightness(1.16)}
+.skillIcon:active:not(:disabled){transform:translateY(1px)}
+.skillIcon:disabled{opacity:.38;filter:grayscale(.85);cursor:not-allowed}
+.skillGlyph{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#ffffff16;border:1px solid #ffffff25;font-size:24px;line-height:1}
+.skillName{font-size:11px;font-weight:900;white-space:nowrap}
+.skillCost{font-size:10px;color:#ffdf91;font-weight:800}
+.skillIcon.bombard .skillGlyph{box-shadow:0 0 12px #ff9c5c55}
+.skillIcon.heal .skillGlyph{box-shadow:0 0 12px #72d9ff55}
+.skillIcon.rage .skillGlyph{box-shadow:0 0 12px #ff696955}
+@media(max-width:620px){#skillDock{gap:6px;bottom:8px}.skillIcon{width:72px;min-height:75px;padding:5px 3px}.skillGlyph{width:32px;height:32px;font-size:21px}.skillName{font-size:10px}.skillCost{font-size:9px}}
+
+
+.unit-panel{margin-top:12px;padding:11px}
+.unit-panel .buttons{grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px}
+.unit-panel button{min-height:48px;padding:7px 6px}
+.control-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:9px 0}
+.control-tab{min-height:39px;padding:7px;font-size:12px}
+.control-tab.active{border-color:#e5bd6c;background:linear-gradient(180deg,#806238,#49351e);color:#fff0c8}
+.control-page{display:none}
+.control-page.active{display:block}
+.control-page>.panel{padding:11px}
+.control-page .buttons{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
+.bottom{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.bottom button{min-height:38px;padding:7px 9px;font-size:11px;flex:1 1 115px}
+@media(min-width:900px){
+ .control-page .techs{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:620px){
+ .control-tabs{position:sticky;top:0;z-index:20;background:#0b1724;padding:5px;border-radius:8px}
+ .control-tab{font-size:11px}
+ .unit-panel .buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .control-page .buttons,.control-page .techs{grid-template-columns:repeat(2,minmax(0,1fr))}
+ main{padding:8px}
+}
+</style></head>
+<body><main>
+<header><div><h1>⚔️ 文明戰線 <span style='color:#f3c66b'>/ FRONTLINE V16</span></h1><div class="muted">REAL-TIME STRATEGY　/　DEPLOY · RESEARCH · CONQUER</div></div>
+<div class="stats"><div class="pill"><span class="coin-icon" aria-label="金幣"></span> <span id="gold">180</span> 金幣</div><button id="infiniteGoldBtn" class="pill" onclick="toggleInfiniteGold()" style="cursor:pointer;border:1px solid #d6ad5a;background:#493b20;color:#ffe0a0">∞ 無限金幣：關</button><div class="pill">⚡ <span id="energy">0</span></div><div class="pill">🏛️ <span id="era">石器時代</span></div><div class="pill">⏱️ <span id="time">0:00</span></div></div></header>
+<section id="arena"><canvas id="game" width="1000" height="400"></canvas><div id="banner">石器時代｜第 1 波敵軍準備中</div>
+<div id="skillDock" aria-label="戰場技能">
+<button class="skillIcon bombard" onclick="skill('bombard')" title="火砲轟炸：消耗 45 能量，敵軍全體受到傷害">
+ <span class="skillGlyph">💥</span><span class="skillName">火砲轟炸</span><span class="skillCost">⚡ 45</span>
+</button>
+<button class="skillIcon heal" onclick="skill('heal')" title="緊急修復：消耗 55 能量，修復我方基地、城牆與砲塔">
+ <span class="skillGlyph">🛡️</span><span class="skillName">緊急修復</span><span class="skillCost">⚡ 55</span>
+</button>
+<button class="skillIcon rage" onclick="skill('rage')" title="全軍狂熱：消耗 65 能量，全軍攻擊速度提升 12 秒">
+ <span class="skillGlyph">⚔️</span><span class="skillName">全軍狂熱</span><span class="skillCost">⚡ 65</span>
+</button>
+</div>
+
+<div class="hud"><div class="base">🟦 我方基地　<b id="php">1500</b>/<span id="pmax">1500</span><div class="bar"><div id="pbar" class="fill pfill" style="width:100%"></div></div></div><div class="base" style="text-align:right">敵方基地 🟥　<b id="ehp">1500</b>/<span id="emax">1500</span><div class="bar"><div id="ebar" class="fill efill" style="width:100%"></div></div></div></div>
+<div id="overlay"><div class="modal"><h2 id="result">勝利</h2><p id="resultText"></p><button onclick="newGame()">再開新戰役</button></div></div></section>
+<section class="panel unit-panel"><h3>🪖 部隊部署｜當前時代兵種</h3><div class="buttons" id="unitButtons"></div></section>
+<nav class="control-tabs" aria-label="管理功能">
+<button class="control-tab active" onclick="showControlTab('tech',this)">🔬 科技</button>
+<button class="control-tab" onclick="showControlTab('economy',this)">⛏️ 經濟</button>
+<button class="control-tab" onclick="showControlTab('defense',this)">🏰 防禦</button>
+<button class="control-tab" onclick="showControlTab('battle',this)">🗺️ 戰場</button>
+</nav>
+<section class="control-page active" id="tab-tech">
+<div class="panel"><h3>🔬 科技研究</h3><div class="muted" style="margin-bottom:7px">研究消耗金幣；升級越高，下一級費用越高。</div><div class="techs" id="techButtons"></div></div>
+</section>
+<section class="control-page" id="tab-economy">
+<div class="panel"><h3>⛏️ 後方礦區與經濟</h3><div class="buttons"><button onclick="hireMiner()">👷 招募挖礦工<small id="minerCost">消耗 120 金幣｜目前 0/8 人</small></button></div><div class="muted" id="mineInfo">礦工會自動往返後方金礦與基地；成功運回礦石後直接增加金幣。可研究採礦工具與礦脈勘探。</div></div>
+</section>
+<section class="control-page" id="tab-defense">
+<div class="panel"><h3>🏰 基地防禦建設</h3><div class="buttons">
+<button onclick="buildDefense('wall')">🧱 強化城牆<small id="wallCost">消耗 220 金幣</small></button>
+<button onclick="buildDefense('turret')">🏹 建造砲塔<small id="turretCost">消耗 300 金幣</small></button><button onclick="repairWall()">🛠️ 修復城牆<small id="repairCost">修復費用計算中</small></button><button onclick="upgradeBase()">🏛️ 升級基地核心<small id="baseUpgradeCost">消耗 450 金幣｜Lv.0/5</small></button>
+</div><div class="muted" id="defenseInfo">城牆設在基地前方，先承受敵軍攻擊；攻城兵對城牆造成 2.5 倍傷害。砲塔自動攻擊敵軍。</div></div>
+</section>
+<section class="control-page" id="tab-battle">
+<div class="panel"><h3>🗺️ 戰場與戰役</h3><div class="buttons">
+<button onclick="setMap('plain')">🌿 綠野平原<small>標準戰場</small></button>
+<button onclick="setMap('desert')">🏜️ 黃金沙漠<small>敵軍資源較多</small></button>
+<button onclick="setMap('volcano')">🌋 熔岩前線<small>敵軍攻擊較強</small></button>
+</div><div class="muted" id="campaignInfo">戰役章節 1｜勝利可解鎖下一章</div><div class="muted" id="aiInfo" style="margin-top:6px">敵軍 AI：分析戰場中</div></div>
+<div class="panel" style="margin-top:8px"><h3>🎯 戰術命令</h3><div class="buttons">
+<button onclick="setCommand('advance')">➡️ 全線推進<small>主動向敵軍基地前進</small></button>
+<button onclick="setCommand('hold')">🛡️ 固守陣地<small>停在中線附近，守住射程</small></button>
+<button onclick="setCommand('focus')">🎯 集火優先<small>優先攻擊最脆弱的敵軍</small></button>
+</div><div class="muted" id="commandInfo">目前命令：全線推進</div></div>
+</section>
+<div class="bottom"><button class="evolve" id="evolve" onclick="evolve()">⬆️ 進化下一時代</button><button id="sound" onclick="toggleSound()">🔇 音效：關</button><button onclick="toggleSpeed()">⏩ 速度：<span id="speed">1</span> 倍</button><button onclick="togglePause()">⏸️ <span id="pause">暫停</span></button><button onclick="saveGame()">💾 儲存進度</button><button onclick="loadGame()">📂 載入進度</button><button onclick="newGame()">🔄 重開本章</button><button onclick="resetCampaign()">🧹 重置章節</button></div>
+<div id="message">先部署部隊！累積資源並研究科技，找到克制敵軍的組合。</div>
+<footer>V42 戰場視覺整理・無限金幣測試模式・純 RTS 戰略｜進度可儲存在本機瀏覽器</footer>
+</main>
+<script>
+
+
+
+
+function showControlTab(name,btn){
+ document.querySelectorAll('.control-page').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+ document.querySelectorAll('.control-tab').forEach(b=>b.classList.remove('active'));
+ if(btn)btn.classList.add('active');
+}
+const cv=document.querySelector('#game'),c=cv.getContext('2d'),$=id=>document.getElementById(id);
+const eras=[
+{name:'石器時代',cost:0,sky:'#b8d1c0',land:'#718e6d',units:['club','slinger','spear']},
+{name:'古典時代',cost:380,sky:'#c5d4df',land:'#8b9a70',units:['sword','archer','chariot','shieldguard']},
+{name:'中世紀',cost:760,sky:'#a8bfd0',land:'#688b78',units:['knight','crossbow','ram']},
+{name:'工業時代',cost:1350,sky:'#aab8c1',land:'#687d80',units:['rifle','cannon','tank']},
+{name:'蒸汽時代',cost:1900,sky:'#b7a58d',land:'#756e60',units:['machinegun','flamer','armoredcar']},
+{name:'資訊時代',cost:2700,sky:'#718da8',land:'#536f83',units:['helicopter','missile','battleship']},
+{name:'未來時代',cost:3800,sky:'#344b70',land:'#405a70',units:['mech','laser','drone']}
+];
+const U={
+club:{n:'棍棒兵',cost:35,hp:105,atk:18,range:25,rate:1.05,spd:28,era:0,col:'#d6ae7b',sz:15,kind:'melee'},
+slinger:{n:'投石兵',cost:55,hp:72,atk:16,range:145,rate:1.35,spd:23,era:0,col:'#e8ca72',sz:13,kind:'range'},
+spear:{n:'長矛兵',cost:70,hp:145,atk:25,range:32,rate:1.25,spd:25,era:0,col:'#a8c5a2',sz:16,kind:'melee'},
+shieldguard:{n:'盾衛',cost:145,hp:380,atk:13,range:28,rate:1.5,spd:17,era:1,col:'#91a9b8',sz:19,kind:'shield'},
+sword:{n:'劍士',cost:95,hp:190,atk:34,range:31,rate:1.05,spd:28,era:1,col:'#c5cbd5',sz:16,kind:'melee'},
+archer:{n:'弓箭手',cost:115,hp:90,atk:31,range:185,rate:1.45,spd:24,era:1,col:'#d4a56b',sz:14,kind:'range'},
+chariot:{n:'戰車',cost:180,hp:310,atk:48,range:34,rate:1.35,spd:38,era:1,col:'#b88c5a',sz:21,kind:'melee'},
+knight:{n:'重裝騎士',cost:220,hp:420,atk:68,range:36,rate:1.2,spd:39,era:2,col:'#9fc9dc',sz:21,kind:'melee'},
+crossbow:{n:'弩兵',cost:185,hp:140,atk:62,range:205,rate:1.6,spd:22,era:2,col:'#d8c08b',sz:15,kind:'range'},
+ram:{n:'攻城槌',cost:260,hp:650,atk:105,range:35,rate:2.0,spd:16,era:2,col:'#9c7657',sz:24,kind:'siege'},
+rifle:{n:'步槍兵',cost:300,hp:210,atk:82,range:220,rate:1.2,spd:25,era:3,col:'#879c83',sz:16,kind:'range'},
+cannon:{n:'重砲',cost:390,hp:360,atk:155,range:260,rate:2.3,spd:13,era:3,col:'#788b9c',sz:23,kind:'siege'},
+tank:{n:'戰車',cost:520,hp:780,atk:185,range:145,rate:1.65,spd:23,era:3,col:'#6c9279',sz:25,kind:'range'},
+machinegun:{n:'重機槍兵',cost:430,hp:260,atk:105,range:235,rate:.82,spd:23,era:4,col:'#9a8870',sz:17,kind:'range'},
+flamer:{n:'火焰兵',cost:470,hp:390,atk:92,range:95,rate:.72,spd:22,era:4,col:'#d17a42',sz:18,kind:'range'},
+armoredcar:{n:'裝甲車',cost:610,hp:900,atk:170,range:155,rate:1.35,spd:34,era:4,col:'#8a9a78',sz:25,kind:'range'},
+helicopter:{n:'武裝直升機',cost:680,hp:520,atk:205,range:255,rate:1.1,spd:42,era:5,col:'#79a9b5',sz:22,kind:'range'},
+missile:{n:'飛彈車',cost:760,hp:470,atk:290,range:300,rate:2.35,spd:15,era:5,col:'#a5a9b2',sz:24,kind:'siege'},
+battleship:{n:'無人戰艦',cost:850,hp:1050,atk:230,range:190,rate:1.45,spd:18,era:5,col:'#7289a8',sz:28,kind:'siege'},
+mech:{n:'機甲戰士',cost:920,hp:1250,atk:270,range:45,rate:1.15,spd:26,era:6,col:'#8ca6d9',sz:26,kind:'melee'},
+laser:{n:'雷射砲兵',cost:850,hp:430,atk:290,range:300,rate:1.55,spd:20,era:6,col:'#a5d9e8',sz:17,kind:'range'},
+drone:{n:'無人機群',cost:980,hp:520,atk:245,range:250,rate:.85,spd:49,era:6,col:'#b5b9db',sz:18,kind:'range'},
+ boss:{n:'戰爭巨獸',cost:0,hp:2600,atk:155,range:58,rate:1.35,spd:12,era:6,col:'#d85c68',sz:39,kind:'boss'},
+ 
+};
+const techs=[
+{id:'power',n:'武器鍛造',base:130,desc:'全軍攻擊 +12%',max:5},
+{id:'armor',n:'裝甲工藝',base:145,desc:'全軍生命 +15%',max:5},
+{id:'economy',n:'資源開採',base:170,desc:'金幣收入 +20%',max:5},
+{id:'training',n:'快速訓練',base:190,desc:'部隊攻速 +8%',max:4},
+{id:'mineSpeed',n:'採礦工具',base:155,desc:'礦工移動與採集速度 +20%',max:5},
+{id:'mineYield',n:'礦脈勘探',base:180,desc:'每趟運回金幣 +15',max:5}
+];
+let S;
+let soundOn=false,audioCtx=null,lastSfxAt={};
+function toggleSound(){
+ soundOn=!soundOn;
+ const b=$('sound');if(b)b.textContent=soundOn?'🔊 音效：開':'🔇 音效：關';
+ if(soundOn){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();sfx('select',true)}catch(e){soundOn=false;if(b)b.textContent='🔇 音效：關';say('此瀏覽器不支援音效。')}}
+ else if(audioCtx&&audioCtx.state==='running')audioCtx.suspend();
+}
+function sfx(type,force=false){
+ if(!soundOn||!audioCtx)return;
+ const now=audioCtx.currentTime,limit=type==='hit'?.12:type==='shot'?.2:.28;
+ if(!force&&now-(lastSfxAt[type]||0)<limit)return;lastSfxAt[type]=now;
+ const presets={
+  select:[520,.055,'sine',.035],hit:[115,.075,'triangle',.045],slash:[260,.09,'sawtooth',.025],
+  shot:[680,.10,'square',.018],boom:[72,.28,'sawtooth',.055],build:[390,.16,'triangle',.035],
+  victory:[660,.24,'sine',.04],death:[95,.18,'triangle',.035]
+ };
+ const [freq,dur,wave,vol]=presets[type]||presets.select;
+ try{
+  const o=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  o.type=wave;o.frequency.setValueAtTime(freq,now);
+  if(type==='boom'||type==='death')o.frequency.exponentialRampToValueAtTime(Math.max(35,freq*.48),now+dur);
+  else o.frequency.exponentialRampToValueAtTime(freq*1.35,now+dur*.65);
+  gain.gain.setValueAtTime(vol,now);gain.gain.exponentialRampToValueAtTime(.0001,now+dur);
+  o.connect(gain);gain.connect(audioCtx.destination);o.start(now);o.stop(now+dur);
+ }catch(e){}
+}
+function fresh(){return {gold:180,infiniteGold:false,energy:0,era:0,miners:[],php:1500,pBaseMax:1500,pBaseUpgrade:0,ehp:1500,eBaseMax:1500,units:[],shots:[],time:0,paused:false,over:false,speed:1,tech:{power:0,armor:0,economy:0,training:0,mineSpeed:0,mineYield:0},enemyTech:{power:0,armor:0,training:0},enemyResearchCd:24,aiReason:'正在觀察我方軍隊',defenses:{p:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0},e:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0}},enemyBuildCd:38,rage:0,enemyTimer:5,wave:1,aiEra:0,aiStyle:'balanced',spawnCount:0,baseCd:0,particles:[],bossWave:0,bossesDefeated:0,eventTimer:42,map:'plain',chapter:1,enemyScale:1,command:'advance'}}
+function say(t){$('message').textContent=t}
+function toggleInfiniteGold(){S.infiniteGold=!S.infiniteGold;ui();say(S.infiniteGold?'測試模式已開啟：無限金幣，所有我方花費不扣款。':'無限金幣已關閉：恢復正常金幣消耗。')}
+function canAfford(cost){return !!S.infiniteGold||S.gold>=cost}
+function spendGold(cost){if(!S.infiniteGold)S.gold=Math.max(0,S.gold-cost)}
+function newGame(){
+ const chapter=Math.max(1,Number(localStorage.getItem('cfCampaignChapter')||1));
+ S=fresh();S.chapter=chapter;S.enemyScale=1+(chapter-1)*.18;S.eBaseMax=1500+((chapter-1)*180);S.ehp=S.eBaseMax;
+ $('overlay').style.display='none';
+ say('戰役第 '+chapter+' 章開始！擊敗敵軍可獲得其生產費用 30% 的金幣；每 5 波出現 Boss。');
+ renderButtons();ui()
+}
+function setCommand(command){S.command=command;const labels={advance:'全線推進',hold:'固守陣地',focus:'集火優先'};$('commandInfo').textContent='目前命令：'+labels[command];say('戰術命令已切換：'+labels[command]);}
+function setMap(map){S.map=map;let names={plain:'綠野平原',desert:'黃金沙漠',volcano:'熔岩前線'};say('戰場已切換：'+names[map]);ui()}
+function costUnit(id){return U[id].cost}
+function train(id,enemy=false){
+ const d=U[id];if(!d)return;if(!enemy&&!canAfford(d.cost)){say('金幣不足，無法訓練 '+d.n);return}
+ if(enemy){S.enemyGold=(S.enemyGold||200)-d.cost;if(S.enemyGold<0)return}else spendGold(d.cost);
+ const tech=enemy?(S.enemyTech||{power:0,armor:0,training:0}):S.tech,sideEra=enemy?(S.aiEra||0):(S.era||0);const hp=d.hp*(1+(enemy?0:tech.armor*.15))*(enemy?1+tech.armor*.13:1),atk=d.atk*(1+(enemy?0:tech.power*.12))*(enemy?1+tech.power*.11:1),eraArmor=Math.min(.16,sideEra*.04);
+ S.units.push({id,enemy,x:enemy?890:110,hp,max:hp,atk,eraArmor,cd:Math.random()*.5,flash:0});if(!enemy)sfx('build');
+ S.spawnCount++;ui()
+}
+function renderButtons(){
+ $('unitButtons').innerHTML=`<div class="muted" style="grid-column:1/-1;margin-bottom:6px">目前時代：${eras[S.era].name}｜僅顯示本時代可部署兵種</div>`+eras[S.era].units.map(id=>{let d=U[id];return `<button data-unit="${id}">${d.n}<small>${d.cost} 金幣｜攻 ${d.atk} / 血 ${d.hp}</small></button>`}).join('');
+ document.querySelectorAll('[data-unit]').forEach(b=>b.onclick=()=>train(b.dataset.unit));
+ $('techButtons').innerHTML=techs.map(t=>{let lv=S.tech[t.id],cost=Math.floor(t.base*(1+lv*.85));return `<button data-tech="${t.id}" ${lv>=t.max?'disabled':''}>${t.n}<small>${t.desc}</small><small>等級 ${lv}/${t.max}｜消耗 ${cost} 金幣</small></button>`}).join('');
+ document.querySelectorAll('[data-tech]').forEach(b=>b.onclick=()=>research(b.dataset.tech));
+}
+function hireMiner(){
+ const count=S.miners.length,cost=Math.ceil(80*Math.pow(1.22,count));
+ if(count>=8)return say('礦工已達上限 8 人。');
+ if(!canAfford(cost))return say('金幣不足！招募礦工需要 '+cost+' 金幣。');
+ spendGold(cost);S.miners.push({x:92,state:'toMine',carry:0,timer:0,walk:Math.random()*6});
+ say('招募礦工完成！目前 '+S.miners.length+' 人，開始前往後方礦區。');ui();
+}
+function updateMiners(dt){
+ const speed=34*(1+(S.tech.mineSpeed||0)*.2),interval=Math.max(1.15,3.8-(S.tech.mineSpeed||0)*.42),yieldGold=25+(S.tech.mineYield||0)*15;
+ for(const m of S.miners){
+  m.progress=m.progress??1;m.timer=Math.max(0,(m.timer||0)-dt);m.walk=(m.walk||0)+dt*8;
+  if(m.state==='toMine'){m.progress=Math.max(0,m.progress-speed*dt/190);if(m.progress<=0){m.state='mining';m.timer=interval;}}
+  else if(m.state==='mining'){if(m.timer<=0){m.carry=yieldGold;m.state='toBase';}}
+  else if(m.state==='toBase'){m.progress=Math.min(1,m.progress+speed*dt/190);if(m.progress>=1){S.gold+=m.carry;m.carry=0;m.state='toMine';}}
+ }
+}
+function drawMining(){
+ const g=c;
+ // Rear mining field behind the friendly base.
+ g.fillStyle='#5b4a35';g.beginPath();g.ellipse(42,102,34,13,0,0,Math.PI*2);g.fill();
+ g.fillStyle='#b78b3e';for(let i=0;i<5;i++){let x=19+i*11,y=95+(i%2)*7;g.beginPath();g.moveTo(x,y+7);g.lineTo(x+4,y-2);g.lineTo(x+9,y+7);g.closePath();g.fill();}
+ g.fillStyle='#f2d078';g.font='bold 10px system-ui';g.textAlign='center';g.fillText('後方金礦',43,78);g.strokeStyle='#d8c28b55';g.setLineDash([4,5]);g.beginPath();g.moveTo(43,115);g.lineTo(94,260);g.stroke();g.setLineDash([]);
+ for(const m of S.miners||[]){
+  const bob=Math.sin(m.walk||0)*2,px=42+52*(m.progress??1),py=112+164*(m.progress??1);
+  g.save();g.translate(px,py+bob);
+  g.fillStyle='#17283b';g.beginPath();g.ellipse(0,8,8,3,0,0,Math.PI*2);g.fill();
+  g.strokeStyle='#283b49';g.lineWidth=3;g.lineCap='round';
+  g.beginPath();g.moveTo(-2,-1);g.lineTo(-4,7);g.moveTo(3,-1);g.lineTo(5,7);g.stroke();
+  g.fillStyle='#d3a46f';g.fillRect(-5,-16,11,15);
+  g.fillStyle='#b58a43';g.beginPath();g.arc(0,-20,5,0,Math.PI*2);g.fill();
+  g.fillStyle='#6e5230';g.fillRect(-6,-25,12,3);
+  if(m.carry>0){g.fillStyle='#e8bd58';g.fillRect(7,-17,8,8);g.fillStyle='#fff2c0';g.font='9px system-ui';g.fillText('+'+m.carry,17,-23);}
+  if(m.state==='mining'){g.strokeStyle='#e8d08a';g.lineWidth=2;g.beginPath();g.moveTo(5,-7);g.lineTo(12,-17);g.stroke();}
+  g.restore();
+ }
+}
+function defenseState(){if(!S.defenses)S.defenses={p:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0},e:{wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0}};for(const k of ['p','e']){if(!S.defenses[k])S.defenses[k]={wall:0,turret:0,wallHp:0,wallMax:0,turretHp:0,turretMax:0};const d=S.defenses[k];d.wallMax=d.wallMax||d.wall*700;d.turretMax=d.turretMax||d.turret*600;d.turretHp=d.turretHp||d.turretMax;}}
+function turretRange(level){return level>0?230+(level-1)*30:0;}
+function buildDefense(type,enemy=false){
+ defenseState();const side=enemy?'e':'p',d=S.defenses[side],level=d[type]||0,max=5;
+ if(level>=max){if(!enemy)say(type==='wall'?'城牆已達最高等級。':'砲塔已達最高等級。');return false}
+ const cost=(type==='wall'?220:300)*Math.pow(1.75,level);
+ if(!enemy&&!canAfford(cost)){say('金幣不足！建造需要 '+Math.ceil(cost)+' 金幣。');return false}
+ if(enemy){S.enemyGold=(S.enemyGold||0)-cost;if(S.enemyGold<0)return false}else spendGold(cost);
+ d[type]++;
+ if(type==='wall'){d.wallHp+=700;d.wallMax=(d.wallMax||0)+700}else{d.turretHp+=600;d.turretMax=(d.turretMax||0)+600}
+ if(!enemy)say((type==='wall'?'城牆':'砲塔')+'升級至 Lv.'+d[type]+'！');
+ ui();return true;
+}
+function repairWall(){
+ defenseState();const p=S.defenses.p,missing=Math.max(0,p.wallMax-p.wallHp);
+ if(!p.wall||missing<=0){say('城牆目前不需要修復。');return}
+ const cost=Math.ceil(missing*.42);
+ if(!canAfford(cost)){say('金幣不足！完整修復需要 '+cost+' 金幣。');return}
+ spendGold(cost);p.wallHp=p.wallMax;say('城牆修復完成，恢復 '+Math.ceil(missing)+' 點耐久！');ui();
+}
+function updateDefenseUI(){
+ defenseState();const p=S.defenses.p;
+ const wc=220*Math.pow(1.75,p.wall),tc=300*Math.pow(1.75,p.turret),missing=Math.max(0,p.wallMax-p.wallHp),rc=Math.ceil(missing*.42);
+ if($('wallCost'))$('wallCost').textContent=p.wall>=5?'已達最高等級｜Lv.5/5':'消耗 '+Math.ceil(wc)+' 金幣｜Lv.'+p.wall+'/5';
+ if($('turretCost'))$('turretCost').textContent=p.turret>=5?'已達最高等級｜Lv.5/5':'消耗 '+Math.ceil(tc)+' 金幣｜Lv.'+p.turret+'/5';
+ if($('repairCost'))$('repairCost').textContent=missing>0?'修復 '+Math.ceil(missing)+' 耐久｜'+rc+' 金幣':'城牆完整';if($('baseUpgradeCost'))$('baseUpgradeCost').textContent=(S.pBaseUpgrade||0)>=5?'已達最高等級 Lv.5':'消耗 '+Math.ceil(450*Math.pow(1.72,S.pBaseUpgrade||0))+' 金幣｜Lv.'+(S.pBaseUpgrade||0)+'/5｜+500 基地生命';if($('defenseInfo'))$('defenseInfo').textContent='我方砲塔射程 '+turretRange(p.turret)+'｜每升1級 +30 射程｜我方城牆 Lv.'+p.wall+'/5（'+Math.ceil(p.wallHp)+'/'+p.wallMax+'）｜砲塔 Lv.'+p.turret+'/5（'+Math.ceil(p.turretHp)+'/'+p.turretMax+'）；敵方城牆 Lv.'+S.defenses.e.wall+'、砲塔 Lv.'+S.defenses.e.turret;
+}
+function baseDamage(side,amount){
+ defenseState();const d=S.defenses[side];
+ if(d.wallHp>0){const absorbed=Math.min(d.wallHp,amount);d.wallHp-=absorbed;amount-=absorbed}
+ if(amount>0){if(side==='p')S.php-=amount;else S.ehp-=amount}
+}
+function research(id){let t=techs.find(x=>x.id===id),lv=S.tech[id],cost=Math.floor(t.base*(1+lv*.85));if(lv>=t.max){say('這項科技已達最高等級。');return}if(!canAfford(cost)){say('研究需要 '+cost+' 金幣。');return}spendGold(cost);S.tech[id]++;if(id==='power')S.units.filter(u=>!u.enemy).forEach(u=>u.atk*=1.12);if(id==='armor')S.units.filter(u=>!u.enemy).forEach(u=>{u.max*=1.15;u.hp*=1.15});say(t.n+'升級完成！');renderButtons();ui()}
+function evolve(){if(S.era>=eras.length-1){say('已經抵達最高時代！');return}let cost=eras[S.era+1].cost;if(!canAfford(cost)){say('進化需要 '+cost+' 金幣。');return}spendGold(cost);S.era++;S.pBaseMax+=450;S.php=Math.min(S.pBaseMax,S.php+450);renderButtons();say('文明進化至 '+eras[S.era].name+'！基地上限增加 450，並恢復 450 基地生命。');ui()}
+function upgradeBase(){S.pBaseUpgrade=S.pBaseUpgrade||0;if(S.pBaseUpgrade>=5)return say('基地核心已達最高等級 Lv.5！');const cost=Math.ceil(450*Math.pow(1.72,S.pBaseUpgrade));if(!canAfford(cost))return say('金幣不足！基地核心升級需要 '+cost+' 金幣。');spendGold(cost);S.pBaseUpgrade++;S.pBaseMax+=500;S.php=Math.min(S.pBaseMax,S.php+500);say('基地核心升級至 Lv.'+S.pBaseUpgrade+'！最大生命增加 500，並恢復 500 生命。');ui()}
+function skill(type){
+ if(type==='bombard'){
+  if(S.energy<45)return say('能量不足！');
+  S.energy-=45;
+  let total=0,count=0;
+  S.units.filter(u=>u.enemy&&u.hp>0).forEach(u=>{
+   const data=U[u.id]||{};
+   const ratio=u.id==='boss'?.12:.25;
+   const damage=Math.max(1,Math.round((data.hp||u.hp)*ratio));
+   u.hp=Math.max(0,u.hp-damage);total+=damage;count++;
+   burst(u.x,252,'#ffb45e',4);
+  });
+  S.shots.push({x:500,y:50,tx:890,ty:300,t:.4,enemy:false,big:true});
+  say('火砲轟炸！命中 '+count+' 個敵軍單位，共造成 '+total+' 點傷害（普通單位 25%／Boss 12%）。');
+ }
+ if(type==='heal'){
+  if(S.energy<55)return say('能量不足！');
+  S.energy-=55;
+  defenseState();
+  const p=S.defenses.p;
+  const baseMax=S.pBaseMax||1500;
+  const baseHeal=Math.min(Math.max(0,baseMax-S.php),Math.round(baseMax*.18));
+  const wallHeal=Math.min(Math.max(0,p.wallMax-p.wallHp),Math.round(p.wallMax*.18));
+  const turretHeal=Math.min(Math.max(0,p.turretMax-p.turretHp),Math.round(p.turretMax*.18));
+  S.php+=baseHeal;
+  p.wallHp+=wallHeal;
+  p.turretHp+=turretHeal;
+  say('全建築緊急修復！基地 +'+baseHeal+'、城牆 +'+wallHeal+'、砲塔 +'+turretHeal+' 生命。');
+ }
+ if(type==='rage'){
+  if(S.energy<65)return say('能量不足！');
+  S.energy-=65;S.rage=12;
+  say('全軍進入狂熱狀態，攻速 +80%，持續 12 秒！');
+ }
+ ui();
+}
+function togglePause(){S.paused=!S.paused;$('pause').textContent=S.paused?'繼續':'暫停'}
+function toggleSpeed(){S.speed=S.speed===1?2:S.speed===2?3:1;$('speed').textContent=S.speed}
+function resetCampaign(){if(!confirm('確定將戰役進度重置為第 1 章？'))return;localStorage.setItem('cfCampaignChapter','1');newGame();say('戰役進度已重置為第 1 章。')}
+function saveGame(){try{localStorage.setItem('civilizationFrontlineSave',JSON.stringify(S));say('進度已儲存於此瀏覽器。')}catch(e){say('儲存失敗：瀏覽器可能限制本機儲存。')}}
+function loadGame(){try{let x=localStorage.getItem('civilizationFrontlineSave');if(!x)return say('找不到已儲存的進度。');S=JSON.parse(x);S.infiniteGold=!!S.infiniteGold;S.miners=S.miners||[];S.tech=S.tech||{power:0,armor:0,economy:0,training:0};S.tech.mineSpeed=S.tech.mineSpeed??S.mineSpeed??0;S.tech.mineYield=S.tech.mineYield??S.mineYield??0;S.pBaseUpgrade=S.pBaseUpgrade||0;S.pBaseMax=S.pBaseMax||1500+(S.era||0)*450+S.pBaseUpgrade*500;S.eBaseMax=S.eBaseMax||1500+((S.chapter||1)-1)*180+(S.aiEra||0)*450;S.php=Math.min(S.pBaseMax,S.php);S.ehp=Math.min(S.eBaseMax,S.ehp);S.tech.mineSpeed=S.tech.mineSpeed||0;S.tech.mineYield=S.tech.mineYield||0;S.enemyTech=S.enemyTech||{power:0,armor:0,training:0};S.defenses=S.defenses||{p:{wall:0,turret:0,wallHp:0},e:{wall:0,turret:0,wallHp:0}};for(const k of ['p','e']){let d=S.defenses[k];d.wallMax=d.wallMax||d.wall*700;d.turretMax=d.turretMax||d.turret*600;d.turretHp=d.turretHp||d.turretMax;}S.enemyBuildCd=S.enemyBuildCd??38;S.enemyResearchCd=S.enemyResearchCd??24;S.aiReason=S.aiReason||'正在觀察我方軍隊';S.paused=false;S.over=false;$('overlay').style.display='none';renderButtons();ui();say('進度載入成功！')}catch(e){say('讀取存檔失敗。')}}
+function ui(){
+ $('campaignInfo').textContent='戰役章節 '+S.chapter+'｜敵軍強度 '+Math.round((S.enemyScale||1)*100)+'%｜克制：遠程＞近戰、近戰＞攻城、攻城＞遠程';if($('aiInfo'))$('aiInfo').textContent='敵軍 AI：'+({balanced:'均衡編隊',rush:'快速突擊',range:'遠程壓制',intercept:'近戰攔截',defense:'基地防守'}[S.aiStyle]||'觀察中')+'｜'+(S.aiReason||'分析戰場中')+'｜敵軍科技 攻'+(S.enemyTech?.power||0)+' 防'+(S.enemyTech?.armor||0)+' 速'+(S.enemyTech?.training||0);$('commandInfo').textContent='目前命令：'+({advance:'全線推進',hold:'固守陣地',focus:'集火優先'}[S.command||'advance']);
+ $('gold').textContent=S.infiniteGold?'∞':Math.floor(S.gold);if($('infiniteGoldBtn'))$('infiniteGoldBtn').textContent=S.infiniteGold?'∞ 無限金幣：開':'∞ 無限金幣：關';if($('minerCost'))$('minerCost').textContent=S.miners.length>=8?'已達上限 8 人':'消耗 '+Math.ceil(80*Math.pow(1.22,S.miners.length))+' 金幣｜目前 '+S.miners.length+'/8 人';if($('mineInfo'))$('mineInfo').textContent='礦工 '+S.miners.length+' 人｜採礦速度 Lv.'+(S.tech.mineSpeed||0)+'｜單趟運回 '+(25+(S.tech.mineYield||0)*15)+' 金幣｜礦工自動往返，運回即入帳。';updateDefenseUI();$('energy').textContent=Math.floor(S.energy);
+ const skillCosts={bombard:45,heal:55,rage:65};
+ document.querySelectorAll('#skillDock button').forEach(b=>{const type=b.classList.contains('bombard')?'bombard':b.classList.contains('heal')?'heal':'rage';b.disabled=S.energy<skillCosts[type]||S.over;});$('era').textContent=eras[S.era].name;$('php').textContent=Math.max(0,Math.ceil(S.php));$('ehp').textContent=Math.max(0,Math.ceil(S.ehp));$('pmax').textContent=S.pBaseMax||1500;$('emax').textContent=S.eBaseMax||1500;$('pbar').style.width=Math.max(0,S.php/(S.pBaseMax||1500)*100)+'%';$('ebar').style.width=Math.max(0,S.ehp/(S.eBaseMax||1500)*100)+'%';$('evolve').textContent=S.era===eras.length-1?'已達最高時代':'⬆️ 進化：'+eras[S.era+1].name+'（'+eras[S.era+1].cost+' 金幣）';$('banner').textContent=eras[S.era].name+'｜第 '+S.wave+' 波'}
+function eraDamage(attackerId, defenderEra){
+ const attackerEra=U[attackerId]?.era??0;
+ const gap=attackerEra-(defenderEra??0);
+ return gap>=0 ? 1+gap*.18 : Math.max(.55,1+gap*.10);
+}
+function matchup(attacker, defender){
+ const a=U[attacker],d=U[defender];
+ if(a.kind==='range' && d.kind==='melee') return 1.28;
+ if(a.kind==='melee' && d.kind==='siege') return 1.35;
+ if(a.kind==='siege' && d.kind==='range') return 1.32;
+ if(a.kind==='siege' && d.kind==='melee') return 0.82;
+ if(a.kind==='melee' && d.kind==='range') return 0.88;
+ if(d.kind==='boss') return 0.92;
+ return 1;
+}
+function burst(x,y,color,count=8){
+ for(let i=0;i<count;i++){let ang=Math.random()*Math.PI*2,spd=35+Math.random()*100;
+ S.particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:.35+Math.random()*.35,max:.7,color,size:2+Math.random()*3});}
+}
+function update(dt){if(S.paused||S.over)return;dt*=S.speed;S.time+=dt;S.gold+=(8+S.tech.economy*2.4)*dt;S.energy+=1.6*dt;updateMiners(dt);S.rage=Math.max(0,S.rage-dt);S.eventTimer-=dt;S.enemyTimer-=dt;S.baseCd-=dt;
+ if(S.eventTimer<=0){triggerEvent();S.eventTimer=48+Math.random()*28}
+ if(S.enemyTimer<=0){enemyWave();S.enemyTimer=Math.max(2.3,6.2-S.time/150)+Math.random()*1.7}
+ for(const u of S.units){let d=U[u.id],dir=u.enemy?-1:1;u.cd-=dt;let target=null,best=9999;
+ for(const v of S.units){if(v.enemy!==u.enemy){let dist=Math.abs(v.x-u.x);if(dist<=d.range+U[v.id].sz+7){let score=dist;if(v.id==='shieldguard')score-=34;if(!u.enemy&&S.command==='focus')score=dist*.22+Math.max(0,v.hp)*.035;if(score<best){best=score;target=v}}}}
+ if(target){if(u.cd<=0){let boost=(!u.enemy&&S.rage>0?1.8:1);let counter=matchup(u.id,target.id),eraMult=eraDamage(u.id,U[target.id].era);if(counter>1&&U[u.id].era<U[target.id].era)eraMult=1-(1-eraMult)*.5;let damage=u.atk*boost*counter*eraMult*(1-(target.eraArmor||0));let escort=S.units.some(s=>s.enemy===target.enemy&&s.id==='shieldguard'&&Math.abs(s.x-target.x)<58&&((target.enemy&&s.x>target.x)||(!target.enemy&&s.x<target.x)));if(escort&&target.id!=='shieldguard'){damage*=.68;let guard=S.units.find(s=>s.enemy===target.enemy&&s.id==='shieldguard'&&Math.abs(s.x-target.x)<58&&((target.enemy&&s.x>target.x)||(!target.enemy&&s.x<target.x)));if(guard)guard.blockAnim=.22;}target.hp-=damage;target.flash=.12;u.attackAnim=.24;if(u.id==='knight'||u.id==='chariot')u.chargeAnim=.3;if(['cannon','tank','mech','ram'].includes(u.id))u.recoilAnim=.18;sfx(d.kind==='range'?'shot':'slash');sfx('hit');target.hitAnim=.12;burst(target.x,278,u.enemy?'#ff927e':'#e8f7ff',3);u.cd=d.rate*(1-(u.enemy?(S.enemyTech?.training||0)*.045:S.tech.training*.055));S.shots.push({x:u.x,y:278,tx:target.x,ty:278,t:.18,max:.18,enemy:u.enemy,kind:d.kind})}}
+ else{
+ let targetSide=u.enemy?'p':'e',base=u.enemy?110:890,wall=S.defenses?.[targetSide],wallX=targetSide==='p'?185:795,wallActive=wall&&wall.wall>0&&wall.wallHp>0;
+ // 砲塔必須位於城牆內側（靠近己方基地），與前線城牆保持明確間距。
+ let turretX=wallX+(targetSide==='p'?-27:27),turretActive=wall&&wall.turret>0&&wall.turretHp>0,objective=wallActive?wallX:turretActive?turretX:base,distToObjective=Math.abs(objective-u.x);
+ // 攻擊順序：先城牆，再城牆內側砲塔，最後基地。
+ let atTurret=!wallActive&&turretActive&&Math.abs(turretX-u.x)<=d.range+22,holdLine=360;
+ if(!u.enemy&&S.command==='hold'&&u.x>=holdLine){if(u.cd<=0&&Math.abs(base-u.x)<=d.range+12){baseDamage('e',u.atk);u.cd=d.rate}}
+ else if(atTurret&&u.cd<=0){
+   let defenderEra=u.enemy?(S.era||0):(S.aiEra||0);let td=u.atk*(d.kind==='siege'?1.8:1)*eraDamage(u.id,defenderEra)*(1-Math.min(.16,defenderEra*.04));u.attackAnim=.24;u.recoilAnim=.18;S.shots.push({x:u.x,y:264,tx:turretX,ty:190,t:.26,max:.26,enemy:u.enemy,big:d.kind==='siege',kind:'siege'});wall.turretHp=Math.max(0,wall.turretHp-td);
+   burst(turretX,190,wall.turretHp<=0?'#e2c58b':'#b9d8e8',wall.turretHp<=0?14:4);
+   if(wall.turretHp<=0){wall.turretRuins=true;wall.turretRuinsUntil=S.time+45;wall.turret=0;wall.turretMax=0;say((targetSide==='p'?'我方':'敵方')+'砲塔遭到摧毀！')}
+   u.cd=d.rate;
+ }else if(distToObjective<=d.range+12){
+   if(u.cd<=0){
+     if(wallActive){
+       let mult=d.kind==='siege'?(u.id==='ram'?3.2:u.id==='cannon'?2.3:1.8):1;
+       u.recoilAnim=.18;S.shots.push({x:u.x,y:265,tx:wallX+8,ty:265,t:.3,max:.3,enemy:u.enemy,big:d.kind==='siege',kind:u.id==='cannon'||u.id==='tank'?'shell':'siege'});let wallEra=u.enemy?(S.era||0):(S.aiEra||0);wall.wallHp=Math.max(0,wall.wallHp-u.atk*mult*eraDamage(u.id,wallEra)*(1-Math.min(.16,wallEra*.04)));burst(wallX,278,wall.wallHp<=0?'#d7c7a4':'#b9c9d8',wall.wallHp<=0?18:5);
+       if(wall.wallHp<=0){wall.ruins=true;wall.ruinsUntil=S.time+60;wall.wall=0;wall.wallMax=0;say((targetSide==='p'?'我方':'敵方')+'前線城牆被摧毀！')}
+     }else{if(u.enemy)baseDamage('p',u.atk*eraDamage(u.id,S.era||0));else baseDamage('e',u.atk*eraDamage(u.id,S.aiEra||0))}
+     u.cd=d.rate;
+   }
+ }else u.x+=dir*d.spd*dt
+ }
+ u.flash=Math.max(0,u.flash-dt);u.attackAnim=Math.max(0,(u.attackAnim||0)-dt);u.hitAnim=Math.max(0,(u.hitAnim||0)-dt);u.blockAnim=Math.max(0,(u.blockAnim||0)-dt);u.chargeAnim=Math.max(0,(u.chargeAnim||0)-dt);u.recoilAnim=Math.max(0,(u.recoilAnim||0)-dt)}
+ S.units.forEach(u=>{if(u.hp<=0&&!u.deadFx){
+ u.deadFx=true;burst(u.x,280,u.enemy?'#ff7d70':'#ffe0a0',18);sfx('death');burst(u.x,270,'#d7e0e2',7);
+ if(u.enemy){
+   const bounty=Math.floor((U[u.id]?.cost||0)*0.30);
+   if(bounty>0){S.gold+=bounty;burst(u.x,252,'#f3c66b',5)}
+   if(u.id==='boss')S.bossesDefeated++;
+ }
+ }});
+ S.units=S.units.filter(u=>u.hp>0&&u.x>35&&u.x<965);
+ S.particles.forEach(p=>{p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=100*dt;p.vx*=.98;});
+ S.particles=S.particles.filter(p=>p.life>0);
+ // Adaptive AI: reassess player composition, enemy-base danger and research needs.
+ if(S.baseCd<=0){analyzeBattlefield();S.baseCd=7.5}
+ S.enemyBuildCd=(S.enemyBuildCd??38)-dt;if(S.enemyBuildCd<=0){defenseState();let side=S.defenses.e;if(side.wall>0&&side.wallHp<side.wallMax*.42&&(S.enemyGold||0)>=Math.ceil((side.wallMax-side.wallHp)*.3)){let repair=Math.min(side.wallMax-side.wallHp,Math.floor((S.enemyGold||0)/.3));S.enemyGold-=Math.ceil(repair*.3);side.wallHp+=repair;say('敵軍正在修復前線城牆！')}else if(side.wall<5&&side.wallHp<420)buildDefense('wall',true);else if(side.turret<5)buildDefense('turret',true);else if(side.wall<5)buildDefense('wall',true);S.enemyBuildCd=Math.max(27,43-S.time/300)}
+ S.enemyResearchCd=(S.enemyResearchCd??24)-dt;
+ if(S.enemyResearchCd<=0){enemyResearch();S.enemyResearchCd=Math.max(17,29-S.time/260)+Math.random()*7}
+ for(let side of [false,true]){defenseState();let lvl=S.defenses[side?'e':'p'].turret,range=turretRange(lvl);let t=S.units.filter(u=>u.enemy!==side&&Math.abs(u.x-(side?890:110))<=range).sort((a,b)=>Math.abs(a.x-(side?890:110))-Math.abs(b.x-(side?890:110)))[0];if(t&&lvl>0){if(!S.turretCd)S.turretCd={p:0,e:0};let k=side?'e':'p';S.turretCd[k]-=dt;if(S.turretCd[k]<=0){
+   const turretEra=side?(S.aiEra||0):(S.era||0),targetEra=U[t.id]?.era??0,gap=turretEra-targetEra;
+   const eraBonus=gap>=0?1+gap*.18:Math.max(.55,1+gap*.10);
+   const eraArmor=Math.min(.16,targetEra*.04);
+   const turretDamage=(42+lvl*38)*eraBonus*(1-eraArmor);
+   t.hp-=turretDamage;burst(t.x,278,side?'#ff9b8b':'#8be6ff',5);burst(side?794:186,side?174:178,side?'#ff9b8b':'#8be6ff',4);S.turretFlash=S.turretFlash||{p:0,e:0};S.turretFlash[k]=.12;S.turretCd[k]=Math.max(.65,1.65-lvl*.22);S.shots.push({x:side?794:186,y:side?174:178,tx:t.x,ty:278,t:.18,max:.18,enemy:side,kind:'turret'})
+ }}}
+ S.shots.forEach(s=>s.t-=dt);S.shots=S.shots.filter(s=>s.t>0);if(S.turretFlash){S.turretFlash.p=Math.max(0,S.turretFlash.p-dt);S.turretFlash.e=Math.max(0,S.turretFlash.e-dt);}
+ if(S.php<=0||S.ehp<=0){
+ S.over=true;
+ if(S.ehp<=0){let next=S.chapter+1;localStorage.setItem('cfCampaignChapter',String(next));$('result').textContent='🏆 戰役勝利！';$('resultText').textContent='第 '+S.chapter+' 章完成！下一章已解鎖。敵方 Boss 擊敗 '+S.bossesDefeated+' 次。'}
+ else{$('result').textContent='💥 基地失守';$('resultText').textContent='第 '+S.chapter+' 章挑戰失敗。調整兵種、研究科技並善用戰場技能再試一次。'}
+ $('overlay').style.display='flex'
+}
+ if(Math.floor(S.time/35)+1>S.wave)S.wave=Math.floor(S.time/35)+1;ui()}
+function analyzeBattlefield(){
+ const own=S.units.filter(u=>!u.enemy);
+ const count={melee:0,range:0,siege:0,heavy:0,fast:0};
+ own.forEach(u=>{const d=U[u.id];if(count[d.kind]!==undefined)count[d.kind]++;if(d.hp>=300)count.heavy++;if(d.spd>=35)count.fast++});
+ const total=Math.max(1,own.length);
+ const melee=count.melee/total, ranged=count.range/total, siege=count.siege/total;
+ const enemyBaseDanger=S.ehp<650 || S.ehp<1500 && S.ehp/1500<.42;
+ if(enemyBaseDanger){
+   S.aiStyle='defense';S.aiReason='基地受威脅，改派高生命部隊守線';
+ }else if(siege>=.22 || count.heavy/total>=.38){
+   S.aiStyle='intercept';S.aiReason='偵測到重裝／攻城部隊，準備近戰攔截';
+ }else if(melee>=.48){
+   S.aiStyle='range';S.aiReason='我方近戰比例偏高，改用遠程火力';
+ }else if(ranged>=.48){
+   S.aiStyle='rush';S.aiReason='我方遠程火力偏多，派快速近戰突擊';
+ }else if(siege>=.12){
+   S.aiStyle='intercept';S.aiReason='偵測到攻城威脅，派近戰快速突破';
+ }else{
+   S.aiStyle='balanced';S.aiReason='我方兵力均衡，採混合兵種應戰';
+ }
+}
+function enemyResearch(){
+ const tech=S.enemyTech||(S.enemyTech={power:0,armor:0,training:0});
+ const own=S.units.filter(u=>!u.enemy),enemy=S.units.filter(u=>u.enemy);
+ const playerPressure=own.reduce((n,u)=>n+U[u.id].atk,0);
+ const enemyPressure=enemy.reduce((n,u)=>n+U[u.id].atk,0);
+ let pick;
+ if(S.ehp<850 || own.length>enemy.length+3) pick='armor';
+ else if(playerPressure>enemyPressure*1.25) pick='power';
+ else pick='training';
+ const max={power:5,armor:5,training:4};
+ if(tech[pick]>=max[pick]){
+   pick=['power','armor','training'].filter(k=>tech[k]<max[k]).sort((a,b)=>tech[a]-tech[b])[0];
+ }
+ if(!pick)return;
+ tech[pick]++;
+ if(pick==='power')enemy.forEach(u=>u.atk*=1.11);
+ if(pick==='armor')enemy.forEach(u=>{u.max*=1.13;u.hp*=1.13});
+ const names={power:'武器強化',armor:'裝甲強化',training:'快速操演'};
+ say('🧠 敵軍完成科技研究：'+names[pick]+' Lv.'+tech[pick]+'！');
+}
+function chooseEnemyUnit(available){
+ const own=S.units.filter(u=>!u.enemy);
+ const tally={melee:0,range:0,siege:0};
+ own.forEach(u=>{const k=U[u.id].kind;if(tally[k]!==undefined)tally[k]++});
+ const total=Math.max(1,own.length);
+ let preferred=[];
+ if(S.aiStyle==='defense'){
+   preferred=available.slice().sort((a,b)=>U[b].hp-U[a].hp);
+ }else if(S.aiStyle==='range'){
+   preferred=available.filter(id=>U[id].kind==='range').sort((a,b)=>U[b].range-U[a].range);
+ }else if(S.aiStyle==='rush'){
+   preferred=available.filter(id=>U[id].kind==='melee').sort((a,b)=>U[b].spd-U[a].spd);
+ }else if(S.aiStyle==='intercept'){
+   preferred=available.filter(id=>U[id].kind==='melee').sort((a,b)=>U[b].spd-U[a].spd);
+ }else{
+   // Balanced force: avoid repeating the same role too often.
+   const least=Object.entries(tally).sort((a,b)=>a[1]-b[1])[0][0];
+   preferred=available.filter(id=>U[id].kind===least);
+ }
+ if(!preferred.length)preferred=available.slice();
+ return preferred[Math.floor(Math.random()*Math.min(preferred.length,2))]||available[0];
+}
+function enemyWave(){
+ let maxEra=Math.min(eras.length-1,Math.floor(S.time/95));if(maxEra>(S.aiEra||0)){let gained=maxEra-(S.aiEra||0);S.aiEra=maxEra;S.eBaseMax=(S.eBaseMax||1500)+gained*450;S.ehp+=gained*450;}
+ if(S.wave%5===0 && S.bossWave!==S.wave){
+  S.bossWave=S.wave;
+  const tech=S.enemyTech||{power:0,armor:0};
+  const hp=(2600+S.wave*180)*(S.enemyScale||1)*(1+tech.armor*.08);
+  S.units.push({id:'boss',enemy:true,x:890,hp,max:hp,atk:(155+S.wave*9)*(S.enemyScale||1)*(1+tech.power*.08),cd:1,flash:0});
+  say('⚠️ Boss 警報！第 '+S.wave+' 波「戰爭巨獸」出現！');
+  return;
+ }
+ const available=eras[S.aiEra].units;
+ let id=chooseEnemyUnit(available);
+ // The AI has a growing economy and can save for stronger counters.
+ S.enemyGold=(S.enemyGold||260)+118;
+ if(S.enemyGold<U[id].cost){
+   const affordable=available.filter(x=>U[x].cost<=S.enemyGold);
+   id=affordable.sort((a,b)=>U[b].hp+U[b].atk-U[a].hp-U[a].atk)[0]||available[0];
+ }
+ S.enemyGold=Math.max(0,S.enemyGold-U[id].cost);
+ const e=U[id],scale=S.enemyScale||1,tech=S.enemyTech||{power:0,armor:0};
+ const hp=e.hp*(1+S.aiEra*.12)*scale*(1+tech.armor*.13);
+ const atk=e.atk*(1+S.aiEra*.1)*scale*(1+tech.power*.11);
+ S.units.push({id,enemy:true,x:890,hp,max:hp,atk,cd:Math.random()*.6,flash:0});
+ if(S.aiEra>S.era&&Math.random()<.4)say('警告：敵方科技領先！盡快進化或研究武器科技。');
+}
+function triggerEvent(){
+ const events=[
+  ()=>{S.gold+=150;say('📦 商隊抵達：獲得 150 金幣！')},
+  ()=>{S.energy=Math.min(100,S.energy+28);say('⚡ 能量風暴：能量增加 28！')},
+  ()=>{S.units.filter(u=>!u.enemy).forEach(u=>u.hp=Math.min(u.max,u.hp+85));say('🌧️ 戰地補給：我方部隊恢復生命！')},
+  ()=>{S.units.filter(u=>u.enemy).forEach(u=>u.hp-=100);say('☄️ 隕石墜落：敵軍全體受到 100 傷害！')},
+  ()=>{if(!S.infiniteGold)S.gold=Math.max(0,S.gold-65);say(S.infiniteGold?'🦹 敵軍劫掠事件發生，但測試模式不扣除金幣。':'🦹 敵軍劫掠：損失 65 金幣！')}
+ ];
+ events[Math.floor(Math.random()*events.length)]();burst(500,180,'#ffe08a',18);ui()
+}
+function draw(){let era=eras[S.era],g=c,gr=g.createLinearGradient(0,0,0,400);
+ let mapColors={plain:[era.sky,era.land],desert:['#e4c28a','#b58b4d'],volcano:['#6b4554','#4d3b43']};
+ let palette=mapColors[S.map]||mapColors.plain;gr.addColorStop(0,palette[0]);gr.addColorStop(1,'#d5ddc5');g.fillStyle=gr;g.fillRect(0,0,1000,400);
+ g.fillStyle=palette[1];g.beginPath();g.moveTo(0,255);g.quadraticCurveTo(170,155,340,255);g.quadraticCurveTo(510,175,690,250);g.quadraticCurveTo(850,160,1000,245);g.lineTo(1000,400);g.lineTo(0,400);g.fill();g.fillStyle='#263a3a22';g.fillRect(0,310,1000,90);
+ // Distinct landmarks per battlefield
+ if(S.map==='desert'){
+   g.globalAlpha=.32;g.fillStyle='#f7dfad';
+   for(let k=0;k<5;k++){let y=205+k*18;g.beginPath();g.moveTo(0,y+18);g.quadraticCurveTo(230,y-28,470,y+14);g.quadraticCurveTo(760,y+42,1000,y-2);g.lineTo(1000,y+26);g.lineTo(0,y+38);g.fill()}
+   g.globalAlpha=1;
+   for(let k=0;k<6;k++){let x=65+k*165;g.fillStyle='#6d5b3c';g.fillRect(x,242,5,30);g.fillStyle='#8a7449';g.beginPath();g.arc(x+2,239,11,Math.PI,Math.PI*2);g.fill()}
+ }else if(S.map==='volcano'){
+   g.globalAlpha=.55;g.fillStyle='#352d36';g.beginPath();g.moveTo(0,245);g.lineTo(135,95);g.lineTo(260,245);g.lineTo(390,130);g.lineTo(520,245);g.lineTo(675,85);g.lineTo(820,245);g.lineTo(930,130);g.lineTo(1000,230);g.lineTo(1000,270);g.lineTo(0,270);g.fill();g.globalAlpha=1;
+   for(let k=0;k<5;k++){let x=90+k*205;g.strokeStyle='#ff8a48';g.lineWidth=3;g.beginPath();g.moveTo(x,275);g.lineTo(x+9,288);g.lineTo(x-2,300);g.lineTo(x+15,311);g.stroke();g.strokeStyle='#ffd27b';g.lineWidth=1;g.stroke()}
+ }
+ // Layered ridgelines and road
+ g.globalAlpha=.22;g.fillStyle='#233d48';g.beginPath();g.moveTo(0,220);g.lineTo(95,155);g.lineTo(180,215);g.lineTo(285,145);g.lineTo(390,220);g.lineTo(515,160);g.lineTo(650,222);g.lineTo(760,150);g.lineTo(900,218);g.lineTo(1000,170);g.lineTo(1000,270);g.lineTo(0,270);g.fill();g.globalAlpha=1;
+ g.strokeStyle='#f2e2b455';g.lineWidth=2;g.setLineDash([14,13]);g.beginPath();g.moveTo(300,330);g.lineTo(700,330);g.stroke();g.setLineDash([]);
+ // Fixed rocks, scrub and ruined stakes give the map a hand-built identity
+ for(let i=0;i<18;i++){let x=(i*137+43)%1000,y=268+(i%4)*13;
+   if(x>170&&x<830)continue;
+   g.fillStyle=i%2?'#344b43aa':'#d4c49a88';g.beginPath();g.ellipse(x,y,5+(i%3)*2,3+(i%2)*2,-.25,0,Math.PI*2);g.fill();
+ }
+ for(let i=0;i<9;i++){let x=35+i*116,y=263+(i%3)*11;
+   g.strokeStyle='#33453c';g.lineWidth=3;g.beginPath();g.moveTo(x,y);g.lineTo(x-2,y-15);g.moveTo(x,y-7);g.lineTo(x+7,y-12);g.stroke();
+ }
+ // Sun haze and drifting atmosphere
+ g.globalAlpha=.13;g.fillStyle='#fff3c4';g.beginPath();g.arc(820,65,38,0,Math.PI*2);g.fill();g.globalAlpha=1;
+ base(20,false);base(870,true);c.save();c.setLineDash([5,6]);c.strokeStyle='#ffffff66';c.lineWidth=2;c.beginPath();c.moveTo(194,218);c.lineTo(194,312);c.moveTo(806,218);c.lineTo(806,312);c.stroke();c.restore();drawFortification(false);drawFortification(true);drawMining();g.fillStyle='#14263dcc';g.fillRect(420,13,160,30);g.fillStyle='white';g.font='bold 15px system-ui';g.textAlign='center';g.fillText(era.name,500,34);
+ S.units.forEach(drawUnit);
+ S.particles.forEach(p=>{c.globalAlpha=Math.max(0,p.life/p.max);c.fillStyle=p.color;c.beginPath();c.arc(p.x,p.y,p.size,0,Math.PI*2);c.fill();c.globalAlpha=1;});
+ S.units.filter(u=>u.id==='boss').forEach(u=>{c.fillStyle='#1a2434';c.fillRect(u.x-42,210,84,7);c.fillStyle='#ff5968';c.fillRect(u.x-42,210,84*Math.max(0,u.hp/u.max),7);c.fillStyle='#fff';c.font='bold 12px system-ui';c.textAlign='center';c.fillText('BOSS',u.x,202);});
+ S.shots.forEach(s=>{
+   const progress=1-Math.max(0,s.t)/(s.max||.18),x=s.x+(s.tx-s.x)*progress,y=s.y+(s.ty-s.y)*progress;
+   const color=s.big?'#ffdf86':s.enemy?'#ff9b8b':'#a9efff';
+   g.save();g.shadowBlur=s.big?24:14;g.shadowColor=color;g.strokeStyle=color;g.globalAlpha=.42;g.lineWidth=s.big?8:3;
+   g.beginPath();g.moveTo(s.x+(s.tx-s.x)*Math.max(0,progress-.2),s.y+(s.ty-s.y)*Math.max(0,progress-.2));g.lineTo(x,y);g.stroke();
+   g.globalAlpha=1;g.fillStyle=color;
+   if(s.kind==='range'){
+     g.save();g.translate(x,y);g.rotate(Math.atan2(s.ty-s.y,s.tx-s.x));
+     g.fillRect(-9,-1.4,15,2.8);g.beginPath();g.moveTo(8,0);g.lineTo(3,-4);g.lineTo(3,4);g.closePath();g.fill();
+     g.restore();
+   }else if(s.kind==='shell'||s.kind==='siege'){
+     g.beginPath();g.arc(x,y,s.big?6:4.5,0,Math.PI*2);g.fill();
+     g.fillStyle='#fff2c2';g.beginPath();g.arc(x-1,y-1,2,0,Math.PI*2);g.fill();
+   }else if(s.kind==='turret'){
+     g.fillRect(x-4,y-2,8,4);
+   }else{
+     g.beginPath();g.arc(x,y,s.big?7:4.5,0,Math.PI*2);g.fill();
+   }
+   if(s.big){g.strokeStyle='#fff4c2';g.lineWidth=2;g.beginPath();g.arc(x,y,13,0,Math.PI*2);g.stroke()}
+   g.restore();
+ });
+ g.textAlign='left';g.font='12px system-ui';g.fillStyle='#182b3a';g.fillText('我方軍團',22,290);g.textAlign='right';g.fillText('敵方軍團',978,290)}
+function drawFortification(enemy){
+ defenseState();const d=S.defenses[enemy?'e':'p'],g=c,x=enemy?795:185,dir=enemy?-1:1;
+ // 砲塔先繪製在後方，城牆最後繪製，形成「城牆在前、砲塔在後」的層次。
+ if(d.turretRuins&&S.time<(d.turretRuinsUntil||0)){
+   const ruinX=x-dir*27;g.fillStyle='#3b4a53';g.fillRect(ruinX-9,204,28,7);g.fillStyle='#8c8c80';g.fillRect(ruinX+1,195,6,9);g.strokeStyle='#53616a';g.lineWidth=3;g.beginPath();g.moveTo(ruinX+4,198);g.lineTo(ruinX+16,189);g.stroke();
+ }
+ if(d.turret>0&&d.turretHp>0){
+   const era=enemy?(S.aiEra||0):(S.era||0),accent=enemy?'#d58b83':'#8bb8c7';
+   const stone=era<=1?'#78858a':era===2?'#65747b':era===3?'#526873':'#526b7c';
+   const trim=era<=1?'#b5b7ad':era===2?'#9eabb0':era===3?'#91a6ae':'#8daec0';
+   g.save();g.translate(x-dir*27,0);g.scale(dir,1);
+   // 統一為低彩度石材／金屬砲台，砲管與裝飾不再使用突兀的大面積亮色。
+   g.fillStyle='#243642';g.fillRect(-21,218,42,8);
+   g.fillStyle=stone;g.fillRect(-18,199,36,22);
+   g.fillStyle=trim;g.fillRect(-20,196,40,5);
+   g.fillStyle=stone;g.fillRect(-14,181,28,18);
+   g.fillStyle=trim;g.fillRect(-16,178,32,5);
+   // 砲塔等級外觀：每升一級增加可辨識的結構，而不只是改顏色。
+   const lv=Math.max(1,Math.min(5,d.turret));
+   g.fillStyle=stone;g.fillRect(-17,174,34,6);
+   g.fillRect(-15,169,6,7);g.fillRect(-3,169,6,7);g.fillRect(9,169,6,7);
+   // Lv.2：加裝兩側支撐柱與加厚平台
+   if(lv>=2){g.fillStyle=trim;g.fillRect(-22,190,5,23);g.fillRect(17,190,5,23);g.fillRect(-23,212,46,4);}
+   // Lv.3：增加外側裝甲與更高的砲塔頂蓋
+   if(lv>=3){g.fillStyle=stone;g.fillRect(-23,180,5,17);g.fillRect(18,180,5,17);g.fillStyle=trim;g.fillRect(-20,165,40,4);}
+   // Lv.4：雙砲管，明確區分高階火力平台
+   if(lv>=4){g.strokeStyle='#9aaeb5';g.lineWidth=4;g.lineCap='round';g.beginPath();g.moveTo(2,188);g.lineTo(27,181);g.moveTo(2,180);g.lineTo(25,170);g.stroke();g.strokeStyle='#405663';g.lineWidth=1.5;g.beginPath();g.moveTo(5,185);g.lineTo(28,178);g.moveTo(5,177);g.lineTo(26,168);g.stroke();}
+   // Lv.5：頂部指揮／瞄準裝置，作為最高級砲塔的輪廓標記
+   if(lv>=5){g.fillStyle='#d2b875';g.fillRect(-3,157,6,8);g.fillRect(-9,160,18,3);g.strokeStyle='#d2b875';g.lineWidth=2;g.beginPath();g.moveTo(0,157);g.lineTo(0,151);g.stroke();g.fillStyle=accent;g.beginPath();g.arc(0,150,3,0,Math.PI*2);g.fill();}
+   // 內縮觀察窗與砲管，採用暗色金屬
+   g.fillStyle='#263b47';g.fillRect(-6,181,12,13);
+   if(lv<4){g.strokeStyle='#9aaeb5';g.lineWidth=6;g.lineCap='round';g.beginPath();g.moveTo(3,184);g.lineTo(27,176);g.stroke();g.strokeStyle='#405663';g.lineWidth=2;g.beginPath();g.moveTo(5,181);g.lineTo(28,173);g.stroke();}
+   g.fillStyle=accent;g.globalAlpha=.8;g.fillRect(-3,184,6,4);g.globalAlpha=1;
+   // 等級銘牌，讓玩家不必只靠耐久條判斷升級
+   g.fillStyle='#172a35';g.fillRect(-13,151,26,12);g.strokeStyle=trim;g.lineWidth=1;g.strokeRect(-13,151,26,12);g.fillStyle='#f2d58b';g.font='bold 9px system-ui';g.textAlign='center';g.fillText('Lv.'+lv,0,160);
+   // 砲台底座細節與耐久條
+   g.fillStyle='#354b58';g.fillRect(-15,205,30,3);g.fillStyle='#263c48';g.fillRect(-18,226,36,4);
+   g.fillStyle=enemy?'#d47b76':'#79b8ca';g.fillRect(-18,226,36*Math.max(0,d.turretHp/(d.turretMax||420)),3);
+   g.restore();
+   const flash=S.turretFlash?.[enemy?'e':'p']||0;
+   if(flash>0){g.save();g.globalAlpha=Math.min(1,flash/.12);g.fillStyle=enemy?'#e9b4a7':'#b5dce5';g.shadowBlur=12;g.shadowColor=enemy?'#c77d72':'#83bdca';g.beginPath();g.arc(x,enemy?176:180,4+flash*30,0,Math.PI*2);g.fill();g.restore();}
+ }
+ // 城牆維持在前線位置；砲塔已向基地內側錯開，避免與城牆柱體重疊。
+ if(d.wall>0){
+   // 寬版石砌城牆：明確呈現連續防線，不再像單獨一根細柱。
+   g.fillStyle='#344852';g.fillRect(x-22,246,68,59);
+   g.fillStyle='#687b83';g.fillRect(x-17,250,58,51);
+   g.fillStyle='#87979a';g.fillRect(x-22,237,68,13);
+   g.fillStyle='#aab5b2';
+   for(let i=0;i<Math.min(7,Math.max(3,d.wall+2));i++)g.fillRect(x-21+i*10,230,7,9);
+   g.fillStyle='#354955';g.fillRect(x-24,248,72,5);
+   g.fillStyle='#263b47';g.fillRect(x-24,217,72,5);
+   g.fillStyle=enemy?'#d47b76':'#79b8ca';g.fillRect(x-24,217,72*Math.max(0,d.wallHp/(d.wallMax||520)),5);
+   g.fillStyle='#e0d6b8';g.font='bold 10px system-ui';g.textAlign='center';g.fillText('城牆 '+Math.ceil(d.wallHp),x+12,212);
+   const ratio=d.wallHp/(d.wallMax||520);if(ratio<.55){g.strokeStyle='#333b3d';g.lineWidth=2;g.beginPath();g.moveTo(x-8,252);g.lineTo(x+1,265);g.lineTo(x-4,277);g.moveTo(x+25,270);g.lineTo(x+17,284);g.stroke()}
+ }
+ if(d.ruins&&S.time<(d.ruinsUntil||0)){
+   g.fillStyle='#59636a';g.beginPath();g.moveTo(x-8,303);g.lineTo(x-2,288);g.lineTo(x+6,296);g.lineTo(x+14,286);g.lineTo(x+25,303);g.closePath();g.fill();
+   g.fillStyle='#a8aaa0';g.fillRect(x-3,292,9,4);g.fillStyle='#3b4147';g.fillRect(x+8,298,12,3);
+   if(Math.floor(S.time*2)%2===0){g.fillStyle='rgba(90,90,90,.18)';g.beginPath();g.arc(x+8,278,8,0,Math.PI*2);g.fill()}
+ }
+}
+function base(x,enemy){let g=c;g.save();g.translate(x,0);let col=enemy?'#a84950':'#287fa8';g.fillStyle='#273848';g.fillRect(0,224,110,82);g.fillStyle=col;g.fillRect(12,178,86,128);g.fillRect(0,205,110,22);g.fillStyle='#e8d8ac';g.beginPath();g.moveTo(3,179);g.lineTo(55,143);g.lineTo(107,179);g.fill();g.fillStyle='#17283b';g.fillRect(43,254,25,52);g.fillStyle=enemy?'#ffb2a6':'#b5edff';g.fillRect(26,194,15,20);g.fillRect(69,194,15,20);g.restore()}
+function drawUnit(u){
+ const g=c,d=U[u.id],id=u.id,enemy=u.enemy,sz=d.sz,team=enemy?'#e85f5b':'#42b9df';
+ const bob=Math.sin(S.time*7+u.x*.07)*1.4,step=Math.sin(S.time*10+u.x*.04)*2.8;
+ const atk=Math.max(0,Math.min(1,(u.attackAnim||0)/.24)),hit=Math.max(0,Math.min(1,(u.hitAnim||0)/.12));
+ g.save();const charge=(u.chargeAnim||0)/.3,recoil=(u.recoilAnim||0)/.18,brace=(u.blockAnim||0)/.22;g.translate(u.x+(id==='knight'||id==='chariot'?charge*11:0),300);if(enemy)g.scale(-1,1);
+ g.fillStyle='#0b182566';g.beginPath();g.ellipse(0,4,sz*1.45,6,0,0,Math.PI*2);g.fill();
+ g.globalAlpha=.18;g.fillStyle=team;g.beginPath();g.ellipse(0,1,sz*1.5,10,0,0,Math.PI*2);g.fill();g.globalAlpha=1;
+ const body=u.flash>0?'#fff':d.col;
+ const limb=(x1,y1,x2,y2,w=4,col='#273746')=>{g.strokeStyle=col;g.lineWidth=w;g.lineCap='round';g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()};
+ const head=(x,y,r,helmet='#435a69')=>{g.fillStyle='#d8b997';g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();g.fillStyle=helmet;g.beginPath();g.arc(x,y-2,r*1.12,Math.PI,Math.PI*2);g.lineTo(x+r,y);g.lineTo(x-r,y);g.fill()};
+ if(id==='boss'){
+   g.translate(0,bob);g.fillStyle=body;g.beginPath();g.moveTo(-30,-49);g.lineTo(-25,-78);g.lineTo(-8,-62);g.lineTo(8,-62);g.lineTo(27,-82);g.lineTo(32,-45);g.lineTo(28,-9);g.lineTo(16,0);g.lineTo(-20,0);g.lineTo(-30,-14);g.closePath();g.fill();
+   g.fillStyle='#29384b';g.fillRect(-26,-43,52,29);g.fillStyle='#ffdf83';g.fillRect(-18,-42,9,6);g.fillRect(9,-42,9,6);
+   limb(-20,-18,-43,5,10,'#4a2933');limb(20,-18,43,5,10,'#4a2933');limb(36,-2,50,-48,6,'#d9e0dc');
+ }else if(id==='ram'){
+   // Covered battering ram with reinforced roof and large wooden wheels
+   g.fillStyle='#293744';g.fillRect(-sz-6,-13,sz*2+12,13);
+   for(let x=-sz;x<=sz;x+=sz*1.1){g.fillStyle='#b58b56';g.beginPath();g.arc(x,-3,7,0,Math.PI*2);g.fill();g.strokeStyle='#493a2c';g.lineWidth=2;g.stroke()}
+   g.fillStyle='#765638';g.fillRect(-sz,-34,sz*2,22);g.fillStyle='#c4a06a';g.beginPath();g.moveTo(-sz-5,-34);g.lineTo(-sz*.65,-47);g.lineTo(sz*.65,-47);g.lineTo(sz+5,-34);g.closePath();g.fill();
+   g.strokeStyle='#3b3029';g.lineWidth=5;g.beginPath();g.moveTo(-sz-8,-39);g.lineTo(sz+8,-39);g.stroke();
+   g.strokeStyle='#d3d9d7';g.lineWidth=7;g.beginPath();g.moveTo(-sz*.5,-25);g.lineTo(sz+17,-25);g.stroke();
+ }else if(id==='cannon'){
+   g.fillStyle='#283747';g.fillRect(-sz,-11,sz*2,10);
+   for(let x of [-sz*.65,sz*.65]){g.fillStyle='#403a32';g.beginPath();g.arc(x,-2,8,0,Math.PI*2);g.fill();g.strokeStyle='#c0a77a';g.lineWidth=2;g.stroke()}
+   g.fillStyle='#667c8b';g.fillRect(-sz*.65,-25,sz*1.25,13);
+   g.save();g.translate(-2,-25);g.rotate(-.16);g.fillStyle='#3d5363';g.fillRect(-2,-5,sz*1.55,10);g.fillStyle='#aebdc5';g.fillRect(sz*1.25,-4,7,8);g.restore();
+   g.fillStyle='#9aabb2';g.fillRect(-sz*.25,-29,sz*.5,5);
+ }else if(id==='tank'){
+   g.fillStyle='#1a2934';g.fillRect(-sz-5,-12,sz*2+10,12);
+   for(let x=-sz;x<=sz;x+=9){g.fillStyle='#8a9a9d';g.beginPath();g.arc(x,-5,3.5,0,Math.PI*2);g.fill()}
+   g.fillStyle=body;g.fillRect(-sz,-25,sz*2,14);g.fillStyle='#394f5b';g.fillRect(-sz*.42,-34,sz*.95,11);
+   g.save();g.translate(0,-31);g.rotate(-.08);g.fillStyle='#879da6';g.fillRect(0,-3,sz*1.35,6);g.fillRect(sz*1.15,-5,7,10);g.restore();
+   g.fillStyle='#d7bf78';g.fillRect(-sz*.75,-23,6,5);
+ }else if(id==='mech'){
+   // Tall bipedal machine: broad shoulders, glowing visor and piston legs
+   g.translate(0,bob*.5);g.fillStyle='#26394f';g.fillRect(-sz*.55,-52,sz*1.1,22);
+   g.fillStyle=body;g.beginPath();g.moveTo(-sz*.75,-49);g.lineTo(-sz*.55,-62);g.lineTo(sz*.55,-62);g.lineTo(sz*.75,-49);g.lineTo(sz*.55,-25);g.lineTo(-sz*.55,-25);g.closePath();g.fill();
+   g.fillStyle='#8ef1ff';g.shadowBlur=12;g.shadowColor='#65dfff';g.fillRect(-6,-55,12,5);g.shadowBlur=0;
+   g.fillStyle='#516a7e';g.fillRect(-sz*.9,-48,sz*1.8,8);
+   limb(-sz*.35,-26,-sz*.5,-8,7,'#aab9c1');limb(sz*.35,-26,sz*.5,-8,7,'#aab9c1');
+   g.fillStyle='#273747';g.fillRect(-sz*.78,-10,sz*.58,8);g.fillRect(sz*.2,-10,sz*.58,8);
+   limb(sz*.65,-45,sz*1.15,-30,8,'#8c9daa');
+ }else if(id==='drone'){
+   // Flying rotorcraft with separated rotors and glowing sensor
+   g.translate(0,-29+bob*2);g.fillStyle='#607b91';g.beginPath();g.ellipse(0,0,sz*.8,7,0,0,Math.PI*2);g.fill();
+   g.fillStyle='#2c3d4d';g.fillRect(-sz*.25,-7,sz*.5,12);g.fillStyle='#83efff';g.shadowBlur=10;g.shadowColor='#72eaff';g.beginPath();g.arc(0,1,3,0,Math.PI*2);g.fill();g.shadowBlur=0;
+   for(let x of [-sz*.85,sz*.85]){limb(x*.65,0,x,-8,3,'#b8c8d0');g.strokeStyle='#d6e2e5';g.lineWidth=3;g.beginPath();g.moveTo(x-8,-9);g.lineTo(x+8,-9);g.stroke()}
+   limb(-sz*.35,5,-sz*.5,13,3,'#9eabb5');limb(sz*.35,5,sz*.5,13,3,'#9eabb5');
+ }else if(id==='knight'||id==='chariot'){
+   // Mounted unit silhouette with horse body, neck, legs and rider
+   g.translate(-recoil*5,bob*.45-charge*2);g.fillStyle=id==='knight'?'#667b8b':'#8b6246';
+   g.beginPath();g.ellipse(-2,-12,sz*.95,11,-.05,0,Math.PI*2);g.fill();
+   g.beginPath();g.moveTo(sz*.35,-17);g.lineTo(sz*.55,-39);g.lineTo(sz*.95,-43);g.lineTo(sz*1.12,-32);g.lineTo(sz*.72,-20);g.closePath();g.fill();
+   limb(-sz*.5,-7,-sz*.58,1,4,'#3d3430');limb(sz*.35,-7,sz*.43,1,4,'#3d3430');
+   g.fillStyle='#b9945f';g.fillRect(-sz*.45,-23,sz*.9,5);
+   g.fillStyle=body;g.fillRect(-sz*.25,-42,sz*.65,18);head(0,-49,sz*.2,'#9caeb9');
+   if(id==='knight'){g.fillStyle='#b9c8cf';g.beginPath();g.moveTo(-sz*.4,-42);g.lineTo(0,-57);g.lineTo(sz*.4,-42);g.closePath();g.fill();limb(sz*.28,-40,sz*.9,-63,4,'#dce4e4')}
+   else{g.fillStyle='#d7b46b';g.fillRect(-sz*.6,-28,sz*1.1,4);g.strokeStyle='#d9e2df';g.lineWidth=2;g.beginPath();g.moveTo(-sz*.5,-29);g.lineTo(sz*.5,-29);g.stroke()}
+ }else{
+   // Infantry classes
+   g.translate(-hit*2,bob);
+   limb(-4,-10,-6+step,-1,4);limb(4,-10,6-step,-1,4);
+   if(id==='shieldguard'){
+     g.fillStyle=brace>0?'#c9eaff':'#899ca9';g.shadowBlur=brace>0?18:0;g.shadowColor='#9be7ff';g.beginPath();g.moveTo(-sz*.9-brace*3,-38);g.lineTo(-sz*.38,-43);g.lineTo(-sz*.35,-13);g.lineTo(-sz*.72,-8);g.closePath();g.fill();
+     g.strokeStyle=brace>0?'#e8fbff':'#d5c18d';g.lineWidth=2+brace*3;g.stroke();g.shadowBlur=0;
+   }
+   g.fillStyle=body;
+   if(id==='spear'){g.beginPath();g.moveTo(-sz*.55,-33);g.lineTo(sz*.45,-33);g.lineTo(sz*.62,-8);g.lineTo(-sz*.62,-8);g.closePath();g.fill()}
+   else if(id==='club'){g.beginPath();g.moveTo(-sz*.65,-33);g.lineTo(sz*.55,-33);g.lineTo(sz*.8,-8);g.lineTo(-sz*.8,-8);g.closePath();g.fill();g.fillStyle='#6d4b34';g.fillRect(-sz*.8,-30,sz*.35,13)}
+   else{g.fillRect(-sz*.48,-34,sz*.96,25)}
+   g.fillStyle=enemy?'#7c303b':'#244e67';g.fillRect(-sz*.45,-30,sz*.9,5);
+   if(id==='shieldguard'||id==='sword'){g.fillStyle='#9eabb4';g.fillRect(-sz*.55,-36,sz*1.1,5)}
+   head(0,-43,sz*.28,id==='archer'?'#8a6948':id==='rifle'?'#53634f':'#465b6a');
+   if(id==='club'){
+     limb(sz*.3,-27,sz*.9,-43,5,'#745033');g.fillStyle='#a77b4b';g.beginPath();g.ellipse(sz*.95,-45,5,9,-.4,0,Math.PI*2);g.fill();
+   }else if(id==='spear'){
+     limb(sz*.35,-25,sz*1.05,-69,3,'#8b6c43');g.fillStyle='#d8d9c9';g.beginPath();g.moveTo(sz*1.05,-74);g.lineTo(sz*.94,-65);g.lineTo(sz*1.16,-66);g.fill();
+   }else if(id==='slinger'){
+     limb(sz*.35,-26,sz*.9,-39,3,'#765638');g.strokeStyle='#d8c18b';g.lineWidth=2;g.beginPath();g.arc(sz*.85,-42,8,-1.2,1.2);g.stroke();g.fillStyle='#b9a17c';g.beginPath();g.arc(sz*1.02,-44,3,0,7);g.fill();
+   }else if(id==='archer'||id==='crossbow'){
+     limb(sz*.3,-25,sz*.9,-37,3,'#765638');g.strokeStyle='#8a6037';g.lineWidth=id==='crossbow'?4:2;g.beginPath();
+     if(id==='archer')g.arc(sz*.95,-42,12,-1.25,1.25);else{g.moveTo(sz*.35,-40);g.lineTo(sz*1.25,-40);g.moveTo(sz*.8,-47);g.lineTo(sz*.8,-33)}g.stroke();
+     if(id==='crossbow'){g.fillStyle='#9ca8a9';g.fillRect(sz*.5,-43,sz*.85,4)}
+   }else if(id==='rifle'){
+     limb(sz*.2,-27,sz*1.15,-38,4,'#364b3c');g.fillStyle='#1e2d32';g.fillRect(sz*.75,-40,sz*.9,4);g.fillStyle='#b9c6c3';g.fillRect(sz*1.5,-41,5,3);
+   }else if(id==='laser'){
+     limb(sz*.2,-26,sz*.85,-39,5,'#718c9b');g.fillStyle='#a8f5ff';g.shadowBlur=12;g.shadowColor='#6beaff';g.fillRect(sz*.7,-42,sz*.9,6);g.shadowBlur=0;
+   }else{
+     limb(sz*.35,-25,sz*.95,-48,4,'#d5dfe1');g.fillStyle='#e6d18b';g.beginPath();g.arc(sz*.95,-48,2.5,0,Math.PI*2);g.fill();
+   }
+   if(id==='sword'){g.fillStyle='#9fb2bd';g.beginPath();g.moveTo(-sz*.95,-38);g.lineTo(-sz*.5,-43);g.lineTo(-sz*.48,-14);g.lineTo(-sz*.92,-11);g.closePath();g.fill()}
+   if(atk>.2){
+     g.globalAlpha=atk*.8;
+     if(id==='archer'||id==='crossbow'||id==='slinger'){
+       g.strokeStyle='#fff0b2';g.lineWidth=2;g.beginPath();g.moveTo(sz*.55,-40);g.lineTo(sz*1.45,-40);g.stroke();
+       g.fillStyle='#fff0b2';g.beginPath();g.arc(sz*1.48,-40,2.5,0,Math.PI*2);g.fill();
+     }else if(id==='rifle'||id==='laser'){
+       g.strokeStyle=id==='laser'?'#8df7ff':'#fff0b2';g.lineWidth=id==='laser'?5:2;
+       g.beginPath();g.moveTo(sz*1.45,-39);g.lineTo(sz*1.8,-39);g.stroke();
+       g.fillStyle=id==='laser'?'#9ffaff':'#ffe6a2';g.beginPath();g.arc(sz*1.8,-39,3+atk*3,0,Math.PI*2);g.fill();
+     }else{
+       g.strokeStyle='#fff0b2';g.lineWidth=3;g.beginPath();g.arc(sz*.45,-34,sz*.8,-1.15,-.15);g.stroke();
+     }
+     g.globalAlpha=1;
+   }
+   if(id==='shieldguard'&&brace>0){g.globalAlpha=brace*.8;g.strokeStyle='#a9ecff';g.lineWidth=3;g.beginPath();g.arc(-sz*.62,-26,sz*.75,-1.7,1.45);g.stroke();g.globalAlpha=1;}
+ }
+ // team marker and unit health
+ g.fillStyle=team;g.fillRect(-2,-72,2,10);g.beginPath();g.moveTo(0,-71);g.lineTo(10,-67);g.lineTo(0,-63);g.fill();
+ g.fillStyle='#172635';g.fillRect(-sz*.9,-79,sz*1.8,5);g.fillStyle=enemy?'#ff6868':'#69e3a2';g.fillRect(-sz*.9,-79,sz*1.8*Math.max(0,u.hp/u.max),5);
+ g.restore();
+}
+let last=0;function loop(t){if(!last)last=t;let dt=Math.min(.05,(t-last)/1000);last=t;update(dt);draw();$('time').textContent=Math.floor(S.time/60)+':'+String(Math.floor(S.time%60)).padStart(2,'0');requestAnimationFrame(loop)}
+newGame();requestAnimationFrame(loop);
+
+
+
+
+</script></body></html>
